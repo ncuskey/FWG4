@@ -1,4 +1,4 @@
-# Fantasy Heightmap Generator
+# FWG4 - Fantasy Heightmap Generator
 
 A React-based procedural fantasy map heightmap generator inspired by Azgaar's Fantasy Map Generator. This tool generates realistic-looking terrain using Voronoi diagrams and blob algorithms, creating color-coded elevation maps entirely in the browser.
 
@@ -110,3 +110,7 @@ This project is open source and available under the MIT License.
 ## Contributing
 
 Feel free to submit issues, feature requests, or pull requests to improve the heightmap generator!
+
+---
+
+*This repository was originally created as FWG4 and has been expanded to include a complete fantasy heightmap generator implementation.*
