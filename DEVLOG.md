@@ -109,6 +109,8 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 - **Lake Coastlines**: Light gray (#666) with 1px stroke
 - **Water Background**: Solid blue background for ocean areas
 - **Visual Separation**: Clear distinction between land and water
+- **Ordered Loop Assembly**: Segments stitched into continuous, clean outlines
+- **Single SVG Paths**: Each feature rendered as one continuous path (no crisscrossing)
 
 ### Phase 4: User Interface and Styling
 
@@ -132,6 +134,12 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 - **Memory Management**: Efficient data structures and cleanup
 - **Async Generation**: Non-blocking UI during map generation
 
+#### Coastline Rendering Fix
+- **Problem Identified**: Initial coastline rendering produced crisscrossing "X" shapes
+- **Root Cause**: Segments rendered individually in arbitrary order
+- **Solution Implemented**: Ordered loop assembly with end-to-start segment stitching
+- **Visual Result**: Clean, continuous coastline outlines around each feature
+
 #### Build and Deployment
 - **TypeScript Compilation**: All type errors resolved
 - **Production Build**: Successfully builds to dist/ folder
@@ -147,6 +155,7 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 ✅ **Color Mapping**: Smooth elevation-to-color conversion
 ✅ **Coastline Detection**: Land-water boundary identification and feature classification
 ✅ **Flood-Fill Labeling**: Efficient region labeling for ocean, lakes, and islands
+✅ **Loop Assembly**: Ordered segment stitching for clean coastline rendering
 
 ### React Architecture
 ✅ **Component Structure**: Modular, reusable components
@@ -166,10 +175,11 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 2. **Realistic Terrain**: Natural-looking coastlines and elevation patterns
 3. **Automatic Coastlines**: Clear visual separation between land and water
 4. **Feature Classification**: Ocean, lakes, islands, and continents properly identified
-5. **Interactive Controls**: 5 adjustable parameters for fine-tuning
-6. **Color-Coded Elevation**: Intuitive blue-to-white color scheme
-7. **Responsive Design**: Mobile-friendly interface
-8. **Performance Optimized**: Smooth generation and rendering
+5. **Clean Coastline Rendering**: Ordered loop assembly eliminates crisscrossing lines
+6. **Interactive Controls**: 5 adjustable parameters for fine-tuning
+7. **Color-Coded Elevation**: Intuitive blue-to-white color scheme
+8. **Responsive Design**: Mobile-friendly interface
+9. **Performance Optimized**: Smooth generation and rendering
 
 ## Performance Metrics
 

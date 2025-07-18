@@ -8,6 +8,7 @@ A React-based procedural fantasy map heightmap generator inspired by Azgaar's Fa
 - **Interactive Controls**: Real-time parameter adjustment for terrain generation
 - **Realistic Terrain**: Uses graph-based heightmap generation for natural-looking coastlines
 - **Automatic Coastlines**: Clear visual separation between land and water with feature classification
+- **Clean Coastline Rendering**: Ordered loop assembly for smooth, professional outlines
 - **Color-Coded Elevation**: Visual representation with blue (water) to white (peaks) color scheme
 - **Responsive Design**: Works on desktop and mobile devices
 - **No Server Required**: Runs entirely in the browser
@@ -29,6 +30,12 @@ A React-based procedural fantasy map heightmap generator inspired by Azgaar's Fa
 - Maps elevation values to colors: deep blue (water) → light blue → green → brown → white (peaks)
 - Applies sea level threshold to distinguish land from water
 - Creates smooth color transitions for natural appearance
+
+### Coastline Rendering
+- Identifies all land-water boundaries using shared polygon edges
+- Groups coastline segments by geographical feature (island, lake, etc.)
+- Assembles segments into ordered, continuous loops for clean outlines
+- Renders each feature's coastline as a single SVG path (no crisscrossing lines)
 
 ## Controls
 
