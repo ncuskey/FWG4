@@ -1,5 +1,7 @@
 import type { Cell } from './voronoi';
 
+const PRECISION = 2;
+
 export interface CoastlineSegment {
   start: [number, number];
   end: [number, number];
@@ -63,7 +65,7 @@ function findSharedEdge(cell1: Cell, cell2: Cell): { start: [number, number], en
   
   // Helper function to create rounded vertex keys
   function vertexKey(vertex: [number, number]): string {
-    return `${vertex[0].toFixed(2)},${vertex[1].toFixed(2)}`;
+    return `${vertex[0].toFixed(PRECISION)},${vertex[1].toFixed(PRECISION)}`;
   }
   
   // Add all vertices from polygon1 to set1
@@ -337,6 +339,13 @@ export function buildCoastlinePaths(
       segmentsByFeature.get(landCell.featureId)!.push(segment);
     }
   }
+
+  // Print sample segments for each feature
+  console.log("\n--- Coastline Segments by Feature ---");
+  for (const [featureId, featureSegments] of segmentsByFeature.entries()) {
+    console.log(`Feature ID: ${featureId}`);
+    console.table(featureSegments.slice(0, 10)); // Print up to 10 segments
+  }
   
   // Build boundary for each feature
   for (const feature of features) {
@@ -354,19 +363,45 @@ export function buildCoastlinePaths(
  */
 function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] {
   if (segments.length === 0) return [];
-  
+
+  // Dedupe segments by rounded start/end keys
+  const seen = new Set<string>();
+  const dedupedSegments: CoastlineSegment[] = [];
+  for (const seg of segments) {
+    const k1 = `${seg.start[0].toFixed(PRECISION)},${seg.start[1].toFixed(PRECISION)}|${seg.end[0].toFixed(PRECISION)},${seg.end[1].toFixed(PRECISION)}`;
+    const k2 = `${seg.end[0].toFixed(PRECISION)},${seg.end[1].toFixed(PRECISION)}|${seg.start[0].toFixed(PRECISION)},${seg.start[1].toFixed(PRECISION)}`;
+    if (!seen.has(k1) && !seen.has(k2)) {
+      seen.add(k1);
+      seen.add(k2);
+      dedupedSegments.push(seg);
+    }
+  }
+  segments = dedupedSegments;
+
   // 1) Build adjacency map of vertex→[neighborVertices]
   const adj = new Map<string, [number, number][]>();
   function key(p: [number, number]) { 
-    return `${p[0].toFixed(2)},${p[1].toFixed(2)}`; 
+    return `${p[0].toFixed(PRECISION)},${p[1].toFixed(PRECISION)}`; 
   }
-  
   for (const {start, end} of segments) {
     const k1 = key(start), k2 = key(end);
     if (!adj.has(k1)) adj.set(k1, []);
     if (!adj.has(k2)) adj.set(k2, []);
     adj.get(k1)!.push(end);
     adj.get(k2)!.push(start);
+  }
+
+  // Debug: check vertex degrees
+  const odd = Array.from(adj.entries())
+    .map(([k,neigh]) => ({vertex:k, degree: neigh.length}))
+    .filter(d => d.degree !== 2);
+  if (odd.length) {
+    console.warn("Odd-degree vertices detected:", odd);
+    odd.forEach(o => {
+      console.groupCollapsed(`Vertex ${o.vertex} has degree ${o.degree}`);
+      console.log("Neighbor coords:", adj.get(o.vertex)!.map(pt=>pt.map(n=>n.toFixed(1)).join(',')));
+      console.groupEnd();
+    });
   }
 
   // 2) Pick the "lowest" vertex to start (min Y, then X)
