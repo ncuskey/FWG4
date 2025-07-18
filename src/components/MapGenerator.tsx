@@ -39,26 +39,43 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
     // Use setTimeout to allow UI to update before heavy computation
     setTimeout(() => {
       try {
+        console.log('Starting map generation...');
+        
         // Generate Voronoi mesh
+        console.log('Generating Voronoi mesh...');
         const mesh = generateVoronoiMesh(width, height, numPoints);
+        console.log('Voronoi mesh generated:', mesh.cells.length, 'cells');
         
         // Generate terrain
+        console.log('Generating terrain...');
         const terrainResult = generateTerrain(mesh, params);
+        console.log('Terrain generated');
         
         // Apply sea level and classify land/water
+        console.log('Applying sea level...');
         applySeaLevel(terrainResult.cells, params.seaLevel);
+        console.log('Sea level applied');
         
         // Generate coastlines
+        console.log('Generating coastlines...');
         markCoastalCells(terrainResult.cells);
         const coastalSegments = findCoastalEdges(terrainResult.cells);
+        console.log('Found', coastalSegments.length, 'coastal segments');
+        
         const generatedFeatures = labelFeatures(terrainResult.cells, width, height);
+        console.log('Labeled features:', generatedFeatures.length);
+        
         buildCoastlinePaths(coastalSegments, generatedFeatures, terrainResult.cells);
+        console.log('Coastline paths built');
         
         // Apply colors
+        console.log('Applying colors...');
         applyColorsToCells(terrainResult.cells, params.seaLevel);
+        console.log('Colors applied');
         
         setCells(terrainResult.cells);
         setFeatures(generatedFeatures);
+        console.log('Map generation complete!');
       } catch (error) {
         console.error('Error generating map:', error);
       } finally {

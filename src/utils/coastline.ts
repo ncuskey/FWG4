@@ -346,6 +346,12 @@ function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] 
     const [x, y] = k.split(',').map(Number);
     return {key: k, x, y, neighbors: neigh};
   });
+  
+  if (verts.length === 0) {
+    console.warn('No vertices found for coastline loop assembly');
+    return [];
+  }
+  
   verts.sort((a, b) => a.y - b.y || a.x - b.x);
   const start = verts[0].key;
 
@@ -353,6 +359,12 @@ function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] 
   const loop: [number, number][] = [];
   let prevKey: string | null = null;
   let currKey = start;
+  
+  // Safety check - ensure starting vertex exists in adjacency map
+  if (!adj.has(start)) {
+    console.warn('Starting vertex not found in adjacency map');
+    return [];
+  }
 
   do {
     // push current point
@@ -365,8 +377,14 @@ function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] 
       .map(p => key(p))
       .find(k => k !== prevKey);
 
+    // Safety check - if no valid next key, break to avoid infinite loop
+    if (!nextKey) {
+      console.warn('No valid next vertex found in coastline loop assembly');
+      break;
+    }
+
     prevKey = currKey;
-    currKey = nextKey!;
+    currKey = nextKey;
 
     // Safety to avoid infinite loop
     if (loop.length > segments.length + 2) break;
