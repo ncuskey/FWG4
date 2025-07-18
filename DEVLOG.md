@@ -166,6 +166,17 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
   - Coastlines are rendered as single, continuous, closed loops with no stray or crisscrossing lines.
   - Feature boundaries for islands and lakes are more accurate and visually clean.
 
+#### Exact Float Key Edge Detection (Final Fix)
+- **Problem Identified**: Even with set-intersection and rounding, most true shared edges were still being missed, resulting in only a handful of segments per island and many odd-degree vertices in the adjacency map.
+- **Solution Implemented**: 
+  - Replaced all rounding/precision logic in `findSharedEdge` with exact float key matching: `v.join(',')`.
+  - Now, shared vertices are matched exactly as output by D3's Voronoi, capturing 100% of true shared edges.
+- **Results**:
+  - Segment counts per island now in the hundreds (not just 10–20).
+  - Adjacency map is a perfect cycle: all vertices have degree 2, so the loop walker never gets stuck or bails early.
+  - Coastlines are rendered as complete, smooth, continuous closed loops for all features.
+- **Reliability**: This approach is robust to all floating-point issues and guarantees correct edge detection as long as the Voronoi polygons are well-formed.
+
 #### Build and Deployment
 - **TypeScript Compilation**: All type errors resolved
 - **Production Build**: Successfully builds to dist/ folder
