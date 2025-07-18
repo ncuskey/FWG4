@@ -2,6 +2,14 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { generateVoronoiMesh } from '../utils/voronoi';
 import { generateTerrain, applySeaLevel, type TerrainParams } from '../utils/terrain';
 import { applyColorsToCells } from '../utils/color';
+import { 
+  findCoastalEdges, 
+  markCoastalCells, 
+  labelFeatures, 
+  buildCoastlinePaths, 
+  boundaryToSVGPath,
+  type Feature 
+} from '../utils/coastline';
 import type { Cell } from '../utils/voronoi';
 
 interface MapGeneratorProps {
@@ -22,6 +30,7 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
   const [params, setParams] = useState<TerrainParams>(DEFAULT_PARAMS);
   const [numPoints, setNumPoints] = useState(3000);
   const [cells, setCells] = useState<Cell[]>([]);
+  const [features, setFeatures] = useState<Feature[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generateMap = useCallback(() => {
@@ -36,13 +45,20 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         // Generate terrain
         const terrainResult = generateTerrain(mesh, params);
         
-        // Apply sea level
+        // Apply sea level and classify land/water
         applySeaLevel(terrainResult.cells, params.seaLevel);
+        
+        // Generate coastlines
+        markCoastalCells(terrainResult.cells);
+        const coastalSegments = findCoastalEdges(terrainResult.cells);
+        const generatedFeatures = labelFeatures(terrainResult.cells, width, height);
+        buildCoastlinePaths(coastalSegments, generatedFeatures, terrainResult.cells);
         
         // Apply colors
         applyColorsToCells(terrainResult.cells, params.seaLevel);
         
         setCells(terrainResult.cells);
+        setFeatures(generatedFeatures);
       } catch (error) {
         console.error('Error generating map:', error);
       } finally {
@@ -74,6 +90,28 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
       );
     }).filter(Boolean);
   }, [cells]);
+
+  const coastlinePaths = useMemo(() => {
+    return features
+      .filter(feature => feature.boundary && feature.boundary.length > 0)
+      .map(feature => {
+        const pathData = boundaryToSVGPath(feature.boundary!);
+        const strokeColor = feature.type === 'lake' ? '#666' : '#222';
+        const strokeWidth = feature.type === 'lake' ? 1 : 2;
+        
+        return (
+          <path
+            key={`coastline-${feature.id}`}
+            d={pathData}
+            fill="none"
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        );
+      });
+  }, [features]);
 
   return (
     <div className="map-generator">
@@ -147,11 +185,23 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
             />
           </div>
         </div>
+        
+        <div className="map-info">
+          <p>Features: {features.length} (Ocean: 1, Lakes: {features.filter(f => f.type === 'lake').length}, Islands: {features.filter(f => f.type === 'island').length})</p>
+          <p>Coastal Cells: {cells.filter(c => c.isCoastal).length}</p>
+        </div>
       </div>
       
       <div className="map-container">
         <svg width={width} height={height} className="heightmap">
+          {/* Water background */}
+          <rect width={width} height={height} fill="#1e3a8a" />
+          
+          {/* Land polygons */}
           {svgPaths}
+          
+          {/* Coastline paths */}
+          {coastlinePaths}
         </svg>
       </div>
     </div>

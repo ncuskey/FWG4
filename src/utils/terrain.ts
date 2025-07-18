@@ -107,12 +107,15 @@ function generateBlob(
 }
 
 /**
- * Apply sea level threshold to create flat ocean
+ * Apply sea level threshold to create flat ocean and classify land/water
  */
 export function applySeaLevel(cells: Cell[], seaLevel: number): void {
   cells.forEach(cell => {
     if (cell.height < seaLevel) {
       cell.height = 0;
+      cell.isLand = false;
+    } else {
+      cell.isLand = true;
     }
   });
 } 

@@ -6,6 +6,8 @@ export interface Cell {
   polygon: [number, number][];
   neighbors: number[];
   height: number;
+  isLand?: boolean; // True if cell is land (height >= sea level)
+  featureId?: number; // ID of the feature this cell belongs to
 }
 
 export interface VoronoiMesh {
