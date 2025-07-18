@@ -177,6 +177,23 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
   - Coastlines are rendered as complete, smooth, continuous closed loops for all features.
 - **Reliability**: This approach is robust to all floating-point issues and guarantees correct edge detection as long as the Voronoi polygons are well-formed.
 
+#### Border Edge Detection for Continent Outlines
+- **Problem Identified**: Landmasses touching the map edge were not being outlined because there was no "neighbor" cell beyond the border to detect.
+- **Solution Implemented**: 
+  - Extended `findCoastalEdges` to accept `width` and `height` parameters.
+  - Added tolerance-based border detection using `BORDER_EPSILON = 1` for clipped Voronoi vertices.
+  - Implemented helper functions `isOnLeft`, `isOnRight`, `isOnTop`, `isOnBottom` for robust border testing.
+  - Added detailed debugging to log near-border edges and total border segment counts.
+- **Algorithm Details**:
+  - After scanning land-water neighbors, iterate over each consecutive polygon edge.
+  - Test if both endpoints lie on the same map border (left, right, top, or bottom).
+  - Emit border segments with `waterCellId: -1` and `type: 'ocean'`.
+  - Group border segments by `featureId` for complete continent outlines.
+- **Expected Results**:
+  - Continents touching map edges now have complete, closed coastline outlines.
+  - Border segments are properly integrated with land-water segments for full feature boundaries.
+  - Debug logging shows near-border edges and total border segment counts for tuning.
+
 #### Build and Deployment
 - **TypeScript Compilation**: All type errors resolved
 - **Production Build**: Successfully builds to dist/ folder
