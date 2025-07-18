@@ -34,7 +34,8 @@ A React-based procedural fantasy map heightmap generator inspired by Azgaar's Fa
 ### Coastline Rendering
 - Identifies all land-water boundaries using shared polygon edges
 - Groups coastline segments by geographical feature (island, lake, etc.)
-- Assembles segments into ordered, continuous loops for clean outlines
+- Uses adjacency-based graph traversal to assemble segments into ordered, continuous loops
+- Starts from southernmost vertex for consistent loop orientation
 - Renders each feature's coastline as a single SVG path (no crisscrossing lines)
 
 ## Controls

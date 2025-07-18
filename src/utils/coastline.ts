@@ -321,60 +321,61 @@ export function buildCoastlinePaths(
 }
 
 /**
- * Assemble segments into a continuous closed loop
+ * Assemble segments into a continuous closed loop using adjacency graph
  */
 function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] {
   if (segments.length === 0) return [];
   
-  const loop: [number, number][] = [];
-  const remaining = [...segments];
-  
-  // Start with the first segment
-  const firstSegment = remaining.shift()!;
-  loop.push(firstSegment.start, firstSegment.end);
-  
-  // Walk through segments end-to-start to build the loop
-  while (remaining.length > 0) {
-    const tail = loop[loop.length - 1];
-    
-    // Find the next segment that connects to the current end
-    const nextIndex = remaining.findIndex(segment => 
-      pointsEqual(segment.start, tail) || pointsEqual(segment.end, tail)
-    );
-    
-    if (nextIndex === -1) {
-      // If we can't find a connecting segment, try to close the loop
-      if (pointsEqual(tail, loop[0])) {
-        break; // Loop is closed
-      }
-      
-      // If we can't close the loop, just add remaining segments
-      for (const segment of remaining) {
-        loop.push(segment.start, segment.end);
-      }
-      break;
-    }
-    
-    // Get the connecting segment
-    const [nextSegment] = remaining.splice(nextIndex, 1);
-    
-    // Add the other endpoint (not the one we're already at)
-    const nextPoint = pointsEqual(nextSegment.start, tail) 
-      ? nextSegment.end 
-      : nextSegment.start;
-    
-    loop.push(nextPoint);
+  // 1) Build adjacency map of vertex→[neighborVertices]
+  const adj = new Map<string, [number, number][]>();
+  function key(p: [number, number]) { 
+    // round to avoid float-mismatch
+    return `${p[0].toFixed(3)},${p[1].toFixed(3)}`; 
   }
   
+  for (const {start, end} of segments) {
+    const k1 = key(start), k2 = key(end);
+    if (!adj.has(k1)) adj.set(k1, []);
+    if (!adj.has(k2)) adj.set(k2, []);
+    adj.get(k1)!.push(end);
+    adj.get(k2)!.push(start);
+  }
+
+  // 2) Pick the "lowest" vertex to start (min Y, then X)
+  const verts = Array.from(adj.entries()).map(([k, neigh]) => {
+    const [x, y] = k.split(',').map(Number);
+    return {key: k, x, y, neighbors: neigh};
+  });
+  verts.sort((a, b) => a.y - b.y || a.x - b.x);
+  const start = verts[0].key;
+
+  // 3) Walk the cycle
+  const loop: [number, number][] = [];
+  let prevKey: string | null = null;
+  let currKey = start;
+
+  do {
+    // push current point
+    const [cx, cy] = currKey.split(',').map(Number);
+    loop.push([cx, cy]);
+
+    const neigh = adj.get(currKey)!;
+    // pick the next vertex that isn't the one we just came from
+    const nextKey = neigh
+      .map(p => key(p))
+      .find(k => k !== prevKey);
+
+    prevKey = currKey;
+    currKey = nextKey!;
+
+    // Safety to avoid infinite loop
+    if (loop.length > segments.length + 2) break;
+  } while (currKey !== start);
+
   return loop;
 }
 
-/**
- * Check if two points are equal (with tolerance for floating point)
- */
-function pointsEqual(p1: [number, number], p2: [number, number]): boolean {
-  return Math.abs(p1[0] - p2[0]) < 0.001 && Math.abs(p1[1] - p2[1]) < 0.001;
-}
+
 
 /**
  * Convert boundary coordinates to SVG path string

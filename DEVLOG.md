@@ -140,6 +140,17 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 - **Solution Implemented**: Ordered loop assembly with end-to-start segment stitching
 - **Visual Result**: Clean, continuous coastline outlines around each feature
 
+#### Coastline Loop Assembly Improvement
+- **Problem Identified**: Previous loop assembly still produced zig-zag patterns and criss-crossing lines
+- **Root Cause**: Walking segments in array order instead of treating as undirected cycle graph
+- **Solution Implemented**: Adjacency-based graph traversal with consistent starting point
+- **Algorithm Details**: 
+  - Builds adjacency map of vertex→[neighborVertices]
+  - Starts from southernmost vertex (min Y, then X) for consistency
+  - Walks cycle by always going to next neighbor that isn't the previous vertex
+  - Uses fixed precision (3 decimal places) to avoid float mismatches
+- **Visual Result**: Each island and lake now has exactly one smooth, continuous coastline outline
+
 #### Build and Deployment
 - **TypeScript Compilation**: All type errors resolved
 - **Production Build**: Successfully builds to dist/ folder
