@@ -77,6 +77,39 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 - **Responsive Layout**: Works on desktop and mobile
 - **Professional Styling**: Gradient background with glassmorphism effects
 
+### Phase 3.5: Coastline System Implementation
+
+#### Coastline Utilities (`src/utils/coastline.ts`)
+- **Land/Water Classification**: Extended Cell interface with `isLand` property
+- **Coastal Edge Detection**: `findCoastalEdges()` identifies land-water boundaries
+- **Feature Labeling**: Flood-fill algorithm to classify ocean, lakes, and islands
+- **Path Assembly**: `buildCoastlinePaths()` creates continuous coastline loops
+- **SVG Integration**: `boundaryToSVGPath()` converts coordinates to SVG paths
+
+**Algorithm Implementation:**
+- **BFS Flood-Fill**: Efficient labeling of connected regions
+- **Edge Detection**: Finds shared vertices between adjacent cells
+- **Loop Assembly**: Connects segments into closed polygon boundaries
+- **Feature Classification**: Distinguishes ocean, lakes, islands, and continents
+
+#### Enhanced Data Model
+- **Cell Extensions**: Added `featureId`, `isCoastal`, `coastalNeighborsCount`
+- **Feature Interface**: Complete metadata for geographical features
+- **Coastline Segments**: Edge data for land-water boundaries
+- **Boundary Storage**: Coordinate arrays for SVG rendering
+
+#### MapGenerator Integration
+- **Generation Pipeline**: Integrated coastline generation into main workflow
+- **Feature Statistics**: Real-time display of ocean, lake, and island counts
+- **Coastal Information**: Shows number of coastal cells
+- **Layered Rendering**: Water background, land polygons, coastline overlay
+
+**Rendering Features:**
+- **Ocean Coastlines**: Dark gray (#222) with 2px stroke
+- **Lake Coastlines**: Light gray (#666) with 1px stroke
+- **Water Background**: Solid blue background for ocean areas
+- **Visual Separation**: Clear distinction between land and water
+
 ### Phase 4: User Interface and Styling
 
 #### CSS Design (`src/App.css`)
@@ -112,6 +145,8 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 ✅ **Blob Terrain Algorithm**: Multi-peak system with configurable parameters
 ✅ **Height Propagation**: BFS-based spreading with falloff and randomness
 ✅ **Color Mapping**: Smooth elevation-to-color conversion
+✅ **Coastline Detection**: Land-water boundary identification and feature classification
+✅ **Flood-Fill Labeling**: Efficient region labeling for ocean, lakes, and islands
 
 ### React Architecture
 ✅ **Component Structure**: Modular, reusable components
@@ -129,10 +164,12 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 
 1. **Procedural Generation**: Unique maps every time with configurable parameters
 2. **Realistic Terrain**: Natural-looking coastlines and elevation patterns
-3. **Interactive Controls**: 5 adjustable parameters for fine-tuning
-4. **Color-Coded Elevation**: Intuitive blue-to-white color scheme
-5. **Responsive Design**: Mobile-friendly interface
-6. **Performance Optimized**: Smooth generation and rendering
+3. **Automatic Coastlines**: Clear visual separation between land and water
+4. **Feature Classification**: Ocean, lakes, islands, and continents properly identified
+5. **Interactive Controls**: 5 adjustable parameters for fine-tuning
+6. **Color-Coded Elevation**: Intuitive blue-to-white color scheme
+7. **Responsive Design**: Mobile-friendly interface
+8. **Performance Optimized**: Smooth generation and rendering
 
 ## Performance Metrics
 
@@ -144,16 +181,17 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 ## Future Enhancements Planned
 
 ### Short Term
+- [ ] River systems ending at coastline segments
 - [ ] Click-to-add terrain feature
 - [ ] Map export functionality (PNG/SVG)
 - [ ] Custom color schemes
 - [ ] Random seed control
 
 ### Medium Term
+- [ ] Biome generation with coastal climate effects
 - [ ] 3D terrain visualization (WebGL)
-- [ ] Biome generation system
-- [ ] River and lake generation
-- [ ] Climate simulation
+- [ ] Coastline smoothing and refinement
+- [ ] Climate simulation using coastal distance
 
 ### Long Term
 - [ ] Full map editor with manual terrain editing
