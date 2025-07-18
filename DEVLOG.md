@@ -154,6 +154,18 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 - **Testing Results**: Successfully generates maps with 300+ coastal segments and 8-12 features
 - **Performance**: Handles edge cases gracefully with console warnings for incomplete loops
 
+#### Coastline Edge Detection and Loop Assembly Overhaul
+- **Problem Identified**: Many true shared edges were being dropped due to strict vertex matching, and fallback logic led to stray cross-map lines.
+- **Solution Implemented**: 
+  - Replaced `findSharedEdge` with a set-intersection approach using rounded vertex keys (`toFixed(2)`) for robust edge detection.
+  - Replaced `assembleBoundaryLoop` with an adjacency-map walker that builds a Map from each rounded vertex key to its neighbors, starts from the southernmost vertex, and walks the cycle by always moving to the neighbor that isn’t the previous vertex.
+  - Removed all fallback logic—only a single, ordered closed loop is returned for each feature.
+- **Precision**: All vertex keys use `toFixed(2)` for consistent matching and to avoid floating-point mismatches.
+- **Expected Results**:
+  - More true coastal segments are detected due to improved vertex matching.
+  - Coastlines are rendered as single, continuous, closed loops with no stray or crisscrossing lines.
+  - Feature boundaries for islands and lakes are more accurate and visually clean.
+
 #### Build and Deployment
 - **TypeScript Compilation**: All type errors resolved
 - **Production Build**: Successfully builds to dist/ folder

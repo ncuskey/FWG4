@@ -51,30 +51,59 @@ export function findCoastalEdges(cells: Cell[]): CoastlineSegment[] {
 }
 
 /**
- * Find the shared edge between two adjacent cells
+ * Find the shared edge between two adjacent cells using set intersection
  */
 function findSharedEdge(cell1: Cell, cell2: Cell): { start: [number, number], end: [number, number] } | null {
   const polygon1 = cell1.polygon;
   const polygon2 = cell2.polygon;
   
-  // Find common vertices between the two polygons
-  const commonVertices: [number, number][] = [];
+  // Build sets of rounded vertex keys for each polygon
+  const set1 = new Set<string>();
+  const set2 = new Set<string>();
   
-  for (const vertex1 of polygon1) {
-    for (const vertex2 of polygon2) {
-      // Check if vertices are the same (with some tolerance for floating point)
-      if (Math.abs(vertex1[0] - vertex2[0]) < 0.001 && Math.abs(vertex1[1] - vertex2[1]) < 0.001) {
-        commonVertices.push(vertex1);
-      }
+  // Helper function to create rounded vertex keys
+  function vertexKey(vertex: [number, number]): string {
+    return `${vertex[0].toFixed(2)},${vertex[1].toFixed(2)}`;
+  }
+  
+  // Add all vertices from polygon1 to set1
+  for (const vertex of polygon1) {
+    set1.add(vertexKey(vertex));
+  }
+  
+  // Add all vertices from polygon2 to set2
+  for (const vertex of polygon2) {
+    set2.add(vertexKey(vertex));
+  }
+  
+  // Find intersection of the two sets
+  const commonKeys = new Set<string>();
+  for (const key of set1) {
+    if (set2.has(key)) {
+      commonKeys.add(key);
     }
   }
   
-  // If we have exactly 2 common vertices, they form the shared edge
-  if (commonVertices.length === 2) {
-    return {
-      start: commonVertices[0],
-      end: commonVertices[1]
-    };
+  // If we have at least 2 common vertices, they form the shared edge
+  if (commonKeys.size >= 2) {
+    // Convert keys back to coordinates and find the original vertices
+    const commonVertices: [number, number][] = [];
+    
+    // Find original vertices from polygon1 that match the common keys
+    for (const vertex of polygon1) {
+      const key = vertexKey(vertex);
+      if (commonKeys.has(key)) {
+        commonVertices.push(vertex);
+      }
+    }
+    
+    // If we found exactly 2 vertices, return them as the edge
+    if (commonVertices.length === 2) {
+      return {
+        start: commonVertices[0],
+        end: commonVertices[1]
+      };
+    }
   }
   
   return null;
@@ -321,7 +350,7 @@ export function buildCoastlinePaths(
 }
 
 /**
- * Assemble segments into a continuous closed loop using adjacency graph
+ * Assemble segments into a continuous closed loop using adjacency-map walker
  */
 function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] {
   if (segments.length === 0) return [];
@@ -329,8 +358,7 @@ function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] 
   // 1) Build adjacency map of vertex→[neighborVertices]
   const adj = new Map<string, [number, number][]>();
   function key(p: [number, number]) { 
-    // round to avoid float-mismatch
-    return `${p[0].toFixed(3)},${p[1].toFixed(3)}`; 
+    return `${p[0].toFixed(2)},${p[1].toFixed(2)}`; 
   }
   
   for (const {start, end} of segments) {
@@ -348,7 +376,6 @@ function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] 
   });
   
   if (verts.length === 0) {
-    console.warn('No vertices found for coastline loop assembly');
     return [];
   }
   
@@ -359,12 +386,6 @@ function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] 
   const loop: [number, number][] = [];
   let prevKey: string | null = null;
   let currKey = start;
-  
-  // Safety check - ensure starting vertex exists in adjacency map
-  if (!adj.has(start)) {
-    console.warn('Starting vertex not found in adjacency map');
-    return [];
-  }
 
   do {
     // push current point
@@ -379,7 +400,6 @@ function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] 
 
     // Safety check - if no valid next key, break to avoid infinite loop
     if (!nextKey) {
-      console.warn('No valid next vertex found in coastline loop assembly');
       break;
     }
 
@@ -392,8 +412,6 @@ function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] 
 
   return loop;
 }
-
-
 
 /**
  * Convert boundary coordinates to SVG path string
