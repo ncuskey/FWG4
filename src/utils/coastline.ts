@@ -326,61 +326,47 @@ export function buildCoastlinePaths(
 function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] {
   if (segments.length === 0) return [];
   
-  const boundary: [number, number][] = [];
-  const used = new Set<number>();
+  const loop: [number, number][] = [];
+  const remaining = [...segments];
   
   // Start with the first segment
-  let currentSegment = segments[0];
-  boundary.push(currentSegment.start);
-  boundary.push(currentSegment.end);
-  used.add(0);
+  const firstSegment = remaining.shift()!;
+  loop.push(firstSegment.start, firstSegment.end);
   
-  // Find connecting segments until we close the loop
-  while (used.size < segments.length) {
-    let foundNext = false;
+  // Walk through segments end-to-start to build the loop
+  while (remaining.length > 0) {
+    const tail = loop[loop.length - 1];
     
-    for (let i = 0; i < segments.length; i++) {
-      if (used.has(i)) continue;
-      
-      const segment = segments[i];
-      
-      // Check if this segment connects to the current end
-      if (pointsEqual(currentSegment.end, segment.start)) {
-        boundary.push(segment.end);
-        currentSegment = segment;
-        used.add(i);
-        foundNext = true;
-        break;
-      } else if (pointsEqual(currentSegment.end, segment.end)) {
-        // Segment is reversed, add start point
-        boundary.push(segment.start);
-        currentSegment = { ...segment, start: segment.end, end: segment.start };
-        used.add(i);
-        foundNext = true;
-        break;
-      }
-    }
+    // Find the next segment that connects to the current end
+    const nextIndex = remaining.findIndex(segment => 
+      pointsEqual(segment.start, tail) || pointsEqual(segment.end, tail)
+    );
     
-    if (!foundNext) {
-      // No more connecting segments, try to close the loop
-      if (pointsEqual(currentSegment.end, boundary[0])) {
+    if (nextIndex === -1) {
+      // If we can't find a connecting segment, try to close the loop
+      if (pointsEqual(tail, loop[0])) {
         break; // Loop is closed
       }
       
-      // If we can't find a connecting segment, just add remaining segments
-      for (let i = 0; i < segments.length; i++) {
-        if (!used.has(i)) {
-          const segment = segments[i];
-          boundary.push(segment.start);
-          boundary.push(segment.end);
-          used.add(i);
-        }
+      // If we can't close the loop, just add remaining segments
+      for (const segment of remaining) {
+        loop.push(segment.start, segment.end);
       }
       break;
     }
+    
+    // Get the connecting segment
+    const [nextSegment] = remaining.splice(nextIndex, 1);
+    
+    // Add the other endpoint (not the one we're already at)
+    const nextPoint = pointsEqual(nextSegment.start, tail) 
+      ? nextSegment.end 
+      : nextSegment.start;
+    
+    loop.push(nextPoint);
   }
   
-  return boundary;
+  return loop;
 }
 
 /**
@@ -396,6 +382,7 @@ function pointsEqual(p1: [number, number], p2: [number, number]): boolean {
 export function boundaryToSVGPath(boundary: [number, number][]): string {
   if (boundary.length === 0) return '';
   
+  // Create a single path with move-to, line-to, and close commands
   const pathParts = boundary.map((point, index) => {
     if (index === 0) {
       return `M ${point[0]} ${point[1]}`;
