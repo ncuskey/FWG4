@@ -7,6 +7,7 @@ A React-based procedural fantasy map heightmap generator inspired by Azgaar's Fa
 - **Procedural Generation**: Creates unique maps using Voronoi diagrams and blob algorithms
 - **Interactive Controls**: Real-time parameter adjustment for terrain generation
 - **Realistic Terrain**: Uses graph-based heightmap generation for natural-looking coastlines
+- **Automatic Coastlines**: Clear visual separation between land and water with feature classification
 - **Color-Coded Elevation**: Visual representation with blue (water) to white (peaks) color scheme
 - **Responsive Design**: Works on desktop and mobile devices
 - **No Server Required**: Runs entirely in the browser
@@ -84,6 +85,7 @@ This creates a `dist` folder with the production-ready files that can be served 
 - `voronoi.ts`: Handles point sampling and Voronoi diagram creation
 - `terrain.ts`: Implements the blob algorithm for terrain generation
 - `color.ts`: Maps elevation values to colors
+- `coastline.ts`: Generates coastlines and classifies geographical features
 
 ### Performance
 - Optimized for 3000-8000 cells (good balance of detail and performance)
@@ -92,9 +94,10 @@ This creates a `dist` folder with the production-ready files that can be served 
 
 ## Future Enhancements
 
+- **River Systems**: Water flow simulation ending at coastline segments
+- **Biome Generation**: Add climate and vegetation layers with coastal effects
 - **3D Terrain View**: WebGL rendering for 3D visualization
-- **Biome Generation**: Add climate and vegetation layers
-- **River Systems**: Water flow simulation based on elevation
+- **Coastline Smoothing**: Natural curve interpolation for smoother coastlines
 - **Map Export**: Save generated maps as images
 - **Interactive Editing**: Click to add/remove terrain features
 - **Custom Color Schemes**: User-defined color palettes
