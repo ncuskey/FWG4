@@ -55,59 +55,15 @@ export function findCoastalEdges(cells: Cell[]): CoastlineSegment[] {
 /**
  * Find the shared edge between two adjacent cells using set intersection
  */
-function findSharedEdge(cell1: Cell, cell2: Cell): { start: [number, number], end: [number, number] } | null {
-  const polygon1 = cell1.polygon;
-  const polygon2 = cell2.polygon;
-  
-  // Build sets of rounded vertex keys for each polygon
-  const set1 = new Set<string>();
-  const set2 = new Set<string>();
-  
-  // Helper function to create rounded vertex keys
-  function vertexKey(vertex: [number, number]): string {
-    return `${vertex[0].toFixed(PRECISION)},${vertex[1].toFixed(PRECISION)}`;
+function findSharedEdge(cell1: Cell, cell2: Cell): { start: [number,number], end: [number,number] } | null {
+  // Create a Set of vertex‐strings from cell1
+  const set1 = new Set(cell1.polygon.map(v => v.join(',')));
+  // Filter cell2’s polygon for any vertices in set1
+  const common = cell2.polygon.filter(v => set1.has(v.join(',')));
+  if (common.length >= 2) {
+    // Return the first two distinct points
+    return { start: common[0], end: common[1] };
   }
-  
-  // Add all vertices from polygon1 to set1
-  for (const vertex of polygon1) {
-    set1.add(vertexKey(vertex));
-  }
-  
-  // Add all vertices from polygon2 to set2
-  for (const vertex of polygon2) {
-    set2.add(vertexKey(vertex));
-  }
-  
-  // Find intersection of the two sets
-  const commonKeys = new Set<string>();
-  for (const key of set1) {
-    if (set2.has(key)) {
-      commonKeys.add(key);
-    }
-  }
-  
-  // If we have at least 2 common vertices, they form the shared edge
-  if (commonKeys.size >= 2) {
-    // Convert keys back to coordinates and find the original vertices
-    const commonVertices: [number, number][] = [];
-    
-    // Find original vertices from polygon1 that match the common keys
-    for (const vertex of polygon1) {
-      const key = vertexKey(vertex);
-      if (commonKeys.has(key)) {
-        commonVertices.push(vertex);
-      }
-    }
-    
-    // If we found exactly 2 vertices, return them as the edge
-    if (commonVertices.length === 2) {
-      return {
-        start: commonVertices[0],
-        end: commonVertices[1]
-      };
-    }
-  }
-  
   return null;
 }
 
