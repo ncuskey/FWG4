@@ -12,6 +12,7 @@ A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map G
 - **Continental mode**: Generate large continents or scattered islands
 - **Adaptive sea level**: Smart height threshold for guaranteed land coverage
 - **Water margin control**: Configurable edge buffer for clean ocean borders
+- **Natural continental shapes**: Irregular, organic landmasses with varied coastlines
 
 ### 🏝️ **Coastline Detection & Rendering**
 - **Automatic coastline detection**: Identifies land-water boundaries
@@ -20,6 +21,7 @@ A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map G
 - **SVG rendering**: Crisp, scalable coastline paths
 - **Robust edge detection**: Unique-edge counting for reliable boundary identification
 - **Open-chain walker**: Handles both closed loops and continental coasts
+- **Natural coastline variation**: Noise jitter creates realistic shoreline contours
 
 ### 🛡️ **Border Protection System**
 - **Multi-layer safety**: Guarantees no land touches map edges
@@ -52,6 +54,7 @@ A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map G
 6. **Tiny Island Removal**: Post-processing to eliminate small features
 7. **Robust Edge Detection**: Unique-edge counting for reliable boundaries
 8. **Open-Chain Walker**: Handles both closed loops and continental coasts
+9. **Natural Shape Generation**: Varied blob radii and noise jitter for organic forms
 
 ### Data Structures
 - **Cell**: Voronoi cell with height, isLand, neighbors, polygon, centroid

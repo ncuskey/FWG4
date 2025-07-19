@@ -25,8 +25,9 @@ export interface Feature {
 /**
  * Find coastal edges using unique-edge counting method
  * More robust than shared edge detection
+ * Now includes explicit map border edges
  */
-export function findCoastalEdges(cells: Cell[]): CoastlineSegment[] {
+export function findCoastalEdges(cells: Cell[], width: number, height: number): CoastlineSegment[] {
   const segments: CoastlineSegment[] = [];
   const edgeMap = new Map<string, number>(); // key = "x1,y1|x2,y2", count occurrences
   
@@ -82,6 +83,45 @@ export function findCoastalEdges(cells: Cell[]): CoastlineSegment[] {
             waterCellId: waterCell.id
           });
         }
+      }
+    }
+  }
+  
+  // Now add explicit map border edges
+  for (const cell of cells) {
+    if (!cell.isLand || !cell.polygon || cell.polygon.length < 3) continue;
+    
+    const polygon = cell.polygon;
+    for (let i = 0; i < polygon.length; i++) {
+      const start = polygon[i];
+      const end = polygon[(i + 1) % polygon.length];
+      
+      // Check if either endpoint lies exactly on the map border
+      const [x1, y1] = start;
+      const [x2, y2] = end;
+      
+      const isBorderEdge = 
+        x1 === 0 || x1 === width || y1 === 0 || y1 === height ||
+        x2 === 0 || x2 === width || y2 === 0 || y2 === height;
+      
+      if (isBorderEdge) {
+        // Normalize start/end to exact border coordinates
+        const normalizedStart: [number, number] = [
+          x1 === 0 ? 0 : x1 === width ? width : x1,
+          y1 === 0 ? 0 : y1 === height ? height : y1
+        ];
+        const normalizedEnd: [number, number] = [
+          x2 === 0 ? 0 : x2 === width ? width : x2,
+          y2 === 0 ? 0 : y2 === height ? height : y2
+        ];
+        
+        segments.push({
+          start: normalizedStart,
+          end: normalizedEnd,
+          landCellId: cell.id,
+          waterCellId: -1, // Special ID for map border
+          featureId: cell.featureId
+        });
       }
     }
   }

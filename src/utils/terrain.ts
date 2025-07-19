@@ -62,11 +62,17 @@ export function generateTerrain(
   const mainBlob = generateRandomBlobInSafeZone(width, height, totalMargin, blobRadius, mainPeakHeight);
   blobs.push(mainBlob);
   
-  // Secondary blobs (fewer in continental mode)
+  // Secondary blobs (fewer in continental mode) with varied radii
   for (let i = 1; i < effectiveNumBlobs; i++) {
     const peakHeight = secondaryPeakHeightRange[0] + 
       Math.random() * (secondaryPeakHeightRange[1] - secondaryPeakHeightRange[0]);
-    const blob = generateRandomBlobInSafeZone(width, height, totalMargin, blobRadius, peakHeight);
+    
+    // Vary blob radius for more irregular shapes
+    const minRadius = blobRadius * 0.6; // 60% of max radius
+    const maxRadius = blobRadius * 1.2; // 120% of max radius
+    const variedRadius = minRadius + Math.random() * (maxRadius - minRadius);
+    
+    const blob = generateRandomBlobInSafeZone(width, height, totalMargin, variedRadius, peakHeight);
     blobs.push(blob);
   }
   
@@ -83,7 +89,7 @@ export function generateTerrain(
     let rawHeight = 0;
     for (const blob of blobs) {
       const distance = Math.sqrt((cx - blob.x) ** 2 + (cy - blob.y) ** 2);
-      if (distance <= blobRadius) { // Only apply blob contribution within radius
+      if (distance <= blob.radius) { // Only apply blob contribution within radius
         const blobHeight = calculateBlobHeight(distance, blob.radius, blob.height, effectiveFalloff, sharpness);
         rawHeight = Math.max(rawHeight, blobHeight);
       }
@@ -91,14 +97,23 @@ export function generateTerrain(
     
     // 2) Apply radial mask for continental mode (optional island mask)
     if (continentMode) {
-      const distanceFromCenter = Math.sqrt((cx - mapCenterX) ** 2 + (cy - mapCenterY) ** 2);
-      const normalizedDistance = distanceFromCenter / (mapDiagonal / 2);
-      const radialMask = Math.max(0, 1 - normalizedDistance * normalizedDistance);
-      rawHeight *= radialMask;
+      // Remove radial mask to break perfect circular symmetry
+      // This allows for more natural, irregular continental shapes
+      // const distanceFromCenter = Math.sqrt((cx - mapCenterX) ** 2 + (cy - mapCenterY) ** 2);
+      // const normalizedDistance = distanceFromCenter / (mapDiagonal / 2);
+      // const radialMask = Math.max(0, 1 - normalizedDistance * normalizedDistance);
+      // rawHeight *= radialMask;
     }
     
     // 3) Store raw height - no edge masking yet, preserve true land geometry
     cell.height = rawHeight;
+    
+    // 4) Apply noise jitter for natural coastline variation (continental mode only)
+    if (continentMode && rawHeight > 0) {
+      const noiseValue = simpleNoise2D(cx * 0.005, cy * 0.005); // Low-frequency noise
+      const jitterFactor = 0.8 + 0.2 * noiseValue; // 80-100% of height
+      cell.height = rawHeight * jitterFactor;
+    }
   });
   
   // Find min/max heights
@@ -132,6 +147,7 @@ export function generateTerrain(
 
 /**
  * Generate a random blob within the safe zone
+ * Now with additional positioning randomness for irregular shapes
  */
 function generateRandomBlobInSafeZone(
   width: number,
@@ -141,10 +157,26 @@ function generateRandomBlobInSafeZone(
   peakHeight: number
 ): Blob {
   const radius = Math.random() * maxRadius;
-  const x = margin + Math.random() * (width - 2 * margin);
-  const y = margin + Math.random() * (height - 2 * margin);
+  
+  // Add some randomness to positioning for more irregular continental shapes
+  const positionJitter = maxRadius * 0.3; // 30% of radius for position variation
+  const jitterX = (Math.random() - 0.5) * positionJitter;
+  const jitterY = (Math.random() - 0.5) * positionJitter;
+  
+  const x = margin + Math.random() * (width - 2 * margin) + jitterX;
+  const y = margin + Math.random() * (height - 2 * margin) + jitterY;
   
   return { x, y, radius, height: peakHeight };
+}
+
+/**
+ * Simple 2D noise function for coastline jitter
+ * Creates natural, irregular continental outlines
+ */
+function simpleNoise2D(x: number, y: number): number {
+  // Simple hash-based noise for natural coastline variation
+  const hash = (x * 12.9898 + y * 78.233) % 1;
+  return Math.sin(hash * Math.PI * 2) * 0.5 + 0.5; // Returns 0-1
 }
 
 /**

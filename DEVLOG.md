@@ -108,6 +108,32 @@
   - **Normalized Edge Keys**: Sorted coordinates with 2-decimal precision
 - **Status**: ✅ Complete
 
+## Phase 8: Natural Continental Shapes and Coastline Variation
+- **Date**: Continental shape improvement and natural coastline generation
+- **Goal**: Break perfect circular symmetry and create natural, irregular continental outlines
+- **Components**:
+  - **Radial Mask Removal**: Eliminated circular constraints in continental mode
+  - **Varied Blob Radii**: Random radius variation (60%-120% of base) for irregular shapes
+  - **Position Jitter**: ±30% radius variation for natural blob placement
+  - **Noise Jitter System**: Simple 2D noise for natural coastline variation
+  - **Natural Coastline Contours**: Wobbly, irregular shoreline generation
+  - **Organic Continental Shapes**: Realistic, asymmetric landmass generation
+- **Key Improvements**:
+  - **Broken Symmetry**: Multiple sources of randomness eliminate perfect circles
+  - **Natural Coastlines**: Noise jitter creates realistic shoreline contours
+  - **Irregular Overlap**: Varied blob sizes and positions for organic shapes
+  - **Organic Placement**: Position jitter for natural continental distribution
+  - **Realistic Appearance**: Azgaar-like continental shapes instead of perfect circles
+  - **Natural Variation**: Low-frequency noise creates gentle coastline jitter
+- **Technical Details**:
+  - **Radial Mask Removal**: Commented out circular constraint in continental mode
+  - **Blob Radius Variation**: minRadius = 0.6x, maxRadius = 1.2x of base radius
+  - **Position Jitter**: ±30% of radius for placement randomness
+  - **Simple Noise Function**: Hash-based 2D noise for natural variation
+  - **Noise Scale**: 0.005 frequency for gentle coastline jitter
+  - **Height Variation**: 80-100% of base height for natural contours
+- **Status**: ✅ Complete
+
 ## Technical Architecture
 
 ### Core Algorithms

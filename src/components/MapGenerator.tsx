@@ -61,7 +61,7 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         // Generate coastlines
         console.log('Generating coastlines...');
         markCoastalCells(terrainResult.cells);
-        const coastalSegments = findCoastalEdges(terrainResult.cells);
+        const coastalSegments = findCoastalEdges(terrainResult.cells, width, height);
         console.log('Found', coastalSegments.length, 'coastal segments');
         
         const generatedFeatures = labelFeatures(terrainResult.cells, width, height);
