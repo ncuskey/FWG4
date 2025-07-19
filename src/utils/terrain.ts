@@ -34,9 +34,12 @@ export function generateTerrain(
   const { cells } = mesh;
   const { numBlobs, mainPeakHeight, secondaryPeakHeightRange, falloff, sharpness } = params;
   
-  // Calculate safe zone parameters - adjusted for 2:1 aspect ratio
-  const MAX_BLOB_RADIUS = 120; // maximum falloff radius of any blob
+  // Calculate safe zone parameters - dynamically computed for canvas dimensions
+  const MAX_BLOB_RADIUS = Math.min(width, height) * 0.15; // 15% of smaller dimension
   const MARGIN = MAX_BLOB_RADIUS; // safe margin from borders
+  
+  console.log(`Safe zone: MAX_BLOB_RADIUS=${MAX_BLOB_RADIUS.toFixed(1)}px, MARGIN=${MARGIN.toFixed(1)}px`);
+  console.log(`Blob placement range: x=[${MARGIN.toFixed(1)}, ${(width-MARGIN).toFixed(1)}], y=[${MARGIN.toFixed(1)}, ${(height-MARGIN).toFixed(1)}]`);
   
   // Reset all heights to 0
   cells.forEach(cell => cell.height = 0);
@@ -72,6 +75,22 @@ export function generateTerrain(
     const edgeMask = calculateEdgeMask(cx, cy, width, height, MARGIN);
     cell.height = maxHeight * edgeMask;
   });
+  
+  // Fallback border override - belt and suspenders approach
+  const EDGE_EPSILON = 30; // conservative edge detection
+  let edgeCellsForced = 0;
+  cells.forEach(cell => {
+    const poly = cell.polygon;
+    const touchesEdge = poly.some(([x, y]) =>
+      x <= EDGE_EPSILON || x >= width - EDGE_EPSILON ||
+      y <= EDGE_EPSILON || y >= height - EDGE_EPSILON
+    );
+    if (touchesEdge) {
+      cell.height = 0; // Force edge cells to water
+      edgeCellsForced++;
+    }
+  });
+  console.log(`Fallback edge forcing: ${edgeCellsForced} cells forced to water`);
   
   // Find min/max heights
   const heights = cells.map(cell => cell.height);
