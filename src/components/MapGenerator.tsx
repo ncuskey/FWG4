@@ -56,6 +56,42 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         applySeaLevel(terrainResult.cells, params.seaLevel);
         console.log('Sea level applied');
         
+        // Debug: Check for any land cells touching the border
+        const EDGE_EPS = 0.1;
+        const bad = terrainResult.cells.filter(cell =>
+          cell.isLand &&
+          cell.polygon.some(([x, y]) =>
+            x <= EDGE_EPS || x >= width - EDGE_EPS ||
+            y <= EDGE_EPS || y >= height - EDGE_EPS
+          )
+        );
+
+        if (bad.length) {
+          console.warn(`🔥 ${bad.length} land cells touching the border!`, bad.map(c => c.id));
+        } else {
+          console.log(`✅ No land cells touching the border - edge masking working correctly`);
+        }
+        
+        // Final safety clamp: Force any border-touching cell to water
+        let clampedCount = 0;
+        terrainResult.cells.forEach(cell => {
+          if (
+            cell.polygon.some(([x, y]) =>
+              x <= EDGE_EPS || x >= width - EDGE_EPS ||
+              y <= EDGE_EPS || y >= height - EDGE_EPS
+            )
+          ) {
+            if (cell.isLand) {
+              cell.isLand = false;
+              clampedCount++;
+            }
+          }
+        });
+        
+        if (clampedCount > 0) {
+          console.log(`🔧 Safety clamp: ${clampedCount} border cells forced to water`);
+        }
+        
         // Generate coastlines
         console.log('Generating coastlines...');
         markCoastalCells(terrainResult.cells);
