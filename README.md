@@ -9,6 +9,8 @@ A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map G
 - **Blob algorithm**: Realistic heightmaps with BFS height propagation
 - **Safe-zone seeding**: Prevents terrain from spilling over map edges
 - **Gradual edge masking**: Smooth ocean rim with natural coastlines
+- **Continental mode**: Generate large continents or scattered islands
+- **Adaptive sea level**: Smart height threshold for guaranteed land coverage
 
 ### 🏝️ **Coastline Detection & Rendering**
 - **Automatic coastline detection**: Identifies land-water boundaries
@@ -41,6 +43,8 @@ A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map G
 2. **Blob Terrain**: BFS height propagation with safe-zone constraints
 3. **Coastline Detection**: Unique edge extraction with adjacency graph traversal
 4. **Border Protection**: Multi-layer safety system with gradual edge masking
+5. **Continental Generation**: Low-frequency terrain with adaptive sea level
+6. **Tiny Island Removal**: Post-processing to eliminate small features
 
 ### Data Structures
 - **Cell**: Voronoi cell with height, isLand, neighbors, polygon, centroid
@@ -77,10 +81,11 @@ npm run build
 1. Click "Generate New Map" to create a new heightmap
 2. Adjust parameters using the sliders:
    - **Points**: Number of Voronoi cells (1000-8000)
-   - **Blobs**: Number of terrain features (1-20)
-   - **Falloff**: Terrain smoothness (0.7-0.95)
+   - **Blobs**: Number of terrain features (1-20, fewer for continents)
+   - **Falloff**: Terrain smoothness (0.7-4.0, higher for gentle plateaus)
    - **Sharpness**: Terrain randomness (0-0.3)
    - **Sea Level**: Water level threshold (0.1-0.4)
+3. **Continental Mode**: Toggle for large continents vs scattered islands
 
 ### Understanding the Output
 - **Blue areas**: Ocean and water bodies

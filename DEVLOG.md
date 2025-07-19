@@ -50,12 +50,36 @@
   - **Smooth Interpolation**: Smoothstep-like interpolation for natural height transitions
   - **Reduced Border Detection**: Less aggressive thresholds (10px, 25px, 50px instead of 20px, 50px, 100px)
   - **Border Protection**: Multiple safety layers ensuring no land touches actual map edges
-  - **Debug Cleanup**: Removed extensive debug logging for cleaner console output
+  - **Debug Cleanup**: Removed extensive debug logging for professional console output
 - **Key Improvements**:
   - Eliminated unnatural straight edges on islands
   - Maintained organic, curved coastlines
   - Preserved border protection guarantees
   - Clean, professional console output
+- **Status**: ✅ Complete
+
+## Phase 6: Continental Generation and Adaptive Sea Level
+- **Date**: Continental terrain generation implementation
+- **Goal**: Generate large, realistic continents instead of scattered small islands
+- **Components**:
+  - **Low-Frequency Terrain**: Fewer, larger blobs (1-3 instead of 8) with gentle plateaus
+  - **Adaptive Sea Level**: Smart sea level calculation based on actual height distribution
+  - **Continental Mode Toggle**: Switch between continental and island generation modes
+  - **Radial Island Mask**: Optional mask for single large landmass generation
+  - **Tiny Island Removal**: Post-processing to eliminate islands smaller than 1% of map area
+  - **Enhanced Parameter Ranges**: Extended falloff range (0.7-4.0) with mode indicators
+- **Key Improvements**:
+  - **Guaranteed Land Coverage**: Adaptive sea level ensures ~25% land coverage in continental mode
+  - **Large Continental Landmasses**: 1-2 major continents instead of scattered islands
+  - **Gentle Terrain**: Wide plateaus with gradual elevation changes
+  - **Smart Parameter Adjustment**: Automatic parameter tuning based on generation mode
+  - **Enhanced Debugging**: Height distribution analysis and land coverage feedback
+- **Technical Details**:
+  - **Exponential Falloff**: For continental mode (falloff ≥ 2.0) with reduced multiplier
+  - **Power Falloff**: For island mode (falloff < 2.0) with sharp peaks
+  - **Adaptive Sea Level**: Uses 25th percentile of heights for continental mode
+  - **Blob Radius Scaling**: 2.0x multiplier for continental generation
+  - **Radial Mask**: Quadratic falloff from center for island-style generation
 - **Status**: ✅ Complete
 
 ## Technical Architecture

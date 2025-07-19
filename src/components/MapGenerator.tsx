@@ -18,12 +18,13 @@ interface MapGeneratorProps {
 }
 
 const DEFAULT_PARAMS: TerrainParams = {
-  numBlobs: 8,
+  numBlobs: 2, // Reduced from 8 for continental generation
   mainPeakHeight: 1.0,
   secondaryPeakHeightRange: [0.3, 0.7],
-  falloff: 0.85,
+  falloff: 2.0, // Reduced from 2.8 for more moderate continental generation
   sharpness: 0.1,
-  seaLevel: 0.2
+  seaLevel: 0.15, // Reduced from 0.2 to ensure more land appears
+  continentMode: true // Enable continental generation by default
 };
 
 export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => {
@@ -53,7 +54,7 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         
         // Apply sea level and classify land/water
         console.log('Applying sea level...');
-        applySeaLevel(terrainResult.cells, params.seaLevel);
+        applySeaLevel(terrainResult.cells, params.seaLevel, params.continentMode);
         console.log('Sea level applied');
         
         // Final safety clamp: Force any border-touching cell to water
@@ -102,8 +103,38 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         const generatedFeatures = labelFeatures(terrainResult.cells, width, height);
         console.log('Labeled features:', generatedFeatures.length);
         
-        buildCoastlinePaths(coastalSegments, generatedFeatures, terrainResult.cells);
-        console.log('Coastline paths built');
+        // Post-process: Remove tiny islands (less than 1% of total cells)
+        const totalCells = terrainResult.cells.length;
+        const MIN_ISLAND_CELLS = Math.floor(totalCells * 0.01); // 1% of map
+        let removedIslands = 0;
+        
+        for (const feature of generatedFeatures) {
+          if (feature.type === 'island' && !feature.border && feature.cells.length < MIN_ISLAND_CELLS) {
+            // Too small to count as island → flood-fill those cells as water
+            for (const cellId of feature.cells) {
+              const cell = terrainResult.cells.find(c => c.id === cellId);
+              if (cell) {
+                cell.isLand = false;
+                cell.height = 0;
+              }
+            }
+            removedIslands++;
+          }
+        }
+        
+        if (removedIslands > 0) {
+          console.log(`🧹 Removed ${removedIslands} tiny islands (less than ${MIN_ISLAND_CELLS} cells each)`);
+          
+          // Re-run feature labeling after removing tiny islands
+          const cleanedFeatures = labelFeatures(terrainResult.cells, width, height);
+          console.log(`Relabeled features: ${cleanedFeatures.length} (was ${generatedFeatures.length})`);
+          
+          buildCoastlinePaths(coastalSegments, cleanedFeatures, terrainResult.cells);
+          setFeatures(cleanedFeatures);
+        } else {
+          buildCoastlinePaths(coastalSegments, generatedFeatures, terrainResult.cells);
+          setFeatures(generatedFeatures);
+        }
         
         // Apply colors
         console.log('Applying colors...');
@@ -111,7 +142,6 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         console.log('Colors applied');
         
         setCells(terrainResult.cells);
-        setFeatures(generatedFeatures);
         console.log('Map generation complete!');
       } catch (error) {
         console.error('Error generating map:', error);
@@ -208,11 +238,12 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
             <input
               type="range"
               min="0.7"
-              max="0.95"
-              step="0.01"
+              max="4.0"
+              step="0.1"
               value={params.falloff}
               onChange={(e) => setParams(prev => ({ ...prev, falloff: Number(e.target.value) }))}
             />
+            <small>{params.falloff >= 2.0 ? 'Continental (gentle plateaus)' : 'Island (sharp peaks)'}</small>
           </div>
           
           <div className="param-group">
@@ -237,6 +268,18 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
               value={params.seaLevel}
               onChange={(e) => setParams(prev => ({ ...prev, seaLevel: Number(e.target.value) }))}
             />
+          </div>
+          
+          <div className="param-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={params.continentMode}
+                onChange={(e) => setParams(prev => ({ ...prev, continentMode: e.target.checked }))}
+              />
+              Continent Mode
+            </label>
+            <small>Generate large continents instead of scattered islands</small>
           </div>
         </div>
         
