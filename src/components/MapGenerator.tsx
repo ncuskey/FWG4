@@ -200,6 +200,21 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point[0]} ${point[1]}`)
         .join(' ') + ' Z';
       
+      // Debug: Check if this cell is being rendered near borders
+      const hasBorderVertices = cell.polygon.some(([x, y]) => 
+        x <= 10 || x >= width - 10 || y <= 10 || y >= height - 10
+      );
+      
+      if (hasBorderVertices && cell.isLand) {
+        console.warn(`🎨 RENDERING LAND CELL WITH BORDER VERTICES:`, {
+          id: cell.id,
+          centroid: [cell.centroid[0].toFixed(1), cell.centroid[1].toFixed(1)],
+          vertices: cell.polygon.map(([x, y]) => [x.toFixed(1), y.toFixed(1)]),
+          color: cell.color,
+          isLand: cell.isLand
+        });
+      }
+      
       return (
         <path
           key={cell.id}
@@ -209,7 +224,7 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         />
       );
     }).filter(Boolean);
-  }, [cells]);
+  }, [cells, width, height]);
 
   const coastlinePaths = useMemo(() => {
     return features
@@ -314,14 +329,24 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
       
       <div className="map-container">
         <svg width={width} height={height} className="heightmap">
+          <defs>
+            <clipPath id="mapClip">
+              <rect width={width} height={height} />
+            </clipPath>
+          </defs>
+          
           {/* Water background */}
           <rect width={width} height={height} fill="#1e3a8a" />
           
-          {/* Land polygons */}
-          {svgPaths}
+          {/* Land polygons - clipped to canvas */}
+          <g clipPath="url(#mapClip)">
+            {svgPaths}
+          </g>
           
-          {/* Coastline paths */}
-          {coastlinePaths}
+          {/* Coastline paths - clipped to canvas */}
+          <g clipPath="url(#mapClip)">
+            {coastlinePaths}
+          </g>
         </svg>
       </div>
     </div>
