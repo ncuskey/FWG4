@@ -108,6 +108,35 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         console.log(`🔍 Verification: ${nearBorderCells.length} cells within 50px of border`);
         console.log(`🔍 Verification: ${landNearBorder.length} of those are land cells`);
         
+        // Check polygon vertices that extend beyond borders
+        const cellsWithBorderVertices = terrainResult.cells.filter(cell => {
+          if (!cell.polygon || cell.polygon.length < 3) return false;
+          return cell.polygon.some(([x, y]) => 
+            x <= 10 || x >= width - 10 || y <= 10 || y >= height - 10
+          );
+        });
+        
+        const landWithBorderVertices = cellsWithBorderVertices.filter(cell => cell.isLand);
+        console.log(`🔍 Polygon check: ${cellsWithBorderVertices.length} cells have vertices within 10px of border`);
+        console.log(`🔍 Polygon check: ${landWithBorderVertices.length} of those are land cells`);
+        
+        if (landWithBorderVertices.length > 0) {
+          console.warn(`🚨 LAND CELLS WITH BORDER VERTICES:`, landWithBorderVertices.map(c => ({
+            id: c.id,
+            centroid: [c.centroid[0].toFixed(1), c.centroid[1].toFixed(1)],
+            vertices: c.polygon?.map(([x, y]) => [x.toFixed(1), y.toFixed(1)]),
+            height: c.height.toFixed(3),
+            isLand: c.isLand
+          })));
+          
+          // Force these cells to water
+          landWithBorderVertices.forEach(cell => {
+            cell.isLand = false;
+            cell.height = 0;
+          });
+          console.log(`🔧 Forced ${landWithBorderVertices.length} cells with border vertices to water`);
+        }
+        
         if (landNearBorder.length > 0) {
           console.warn(`🚨 LAND CELLS NEAR BORDER:`, landNearBorder.map(c => ({
             id: c.id,
