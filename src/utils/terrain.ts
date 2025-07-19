@@ -40,8 +40,6 @@ export function generateTerrain(
   
   console.log(`Canvas dimensions: ${width}x${height}`);
   console.log(`Safe zone: MAX_BLOB_RADIUS=${MAX_BLOB_RADIUS.toFixed(1)}px, MARGIN=${MARGIN.toFixed(1)}px`);
-  console.log(`Blob placement range: x=[${MARGIN.toFixed(1)}, ${(width-MARGIN).toFixed(1)}], y=[${MARGIN.toFixed(1)}, ${(height-MARGIN).toFixed(1)}]`);
-  console.log(`Expected for 1000x500: MAX_BLOB_RADIUS=75px, MARGIN=75px, x=[75, 925], y=[75, 425]`);
   
   // Reset all heights to 0
   cells.forEach(cell => cell.height = 0);
@@ -52,7 +50,6 @@ export function generateTerrain(
   // Main blob
   const mainBlob = generateRandomBlobInSafeZone(width, height, MARGIN, MAX_BLOB_RADIUS, mainPeakHeight);
   blobs.push(mainBlob);
-  console.log(`Main blob: x=${mainBlob.x.toFixed(1)}, y=${mainBlob.y.toFixed(1)}, r=${mainBlob.radius.toFixed(1)}`);
   
   // Secondary blobs
   for (let i = 1; i < numBlobs; i++) {
@@ -60,11 +57,6 @@ export function generateTerrain(
       Math.random() * (secondaryPeakHeightRange[1] - secondaryPeakHeightRange[0]);
     const blob = generateRandomBlobInSafeZone(width, height, MARGIN, MAX_BLOB_RADIUS, peakHeight);
     blobs.push(blob);
-  }
-  
-  // Log first secondary blob for verification
-  if (blobs.length > 1) {
-    console.log(`Secondary blob: x=${blobs[1].x.toFixed(1)}, y=${blobs[1].y.toFixed(1)}, r=${blobs[1].radius.toFixed(1)}`);
   }
   
   // Apply blob heights to all cells with edge masking
@@ -83,8 +75,6 @@ export function generateTerrain(
     const mask = calculateEdgeMask(cx, cy, width, height, MARGIN);
     cell.height = rawHeight * mask;
   });
-  
-  console.log(`Edge masking applied: height guaranteed to be 0 at map borders`);
   
   // Find min/max heights
   const heights = cells.map(cell => cell.height);
@@ -140,6 +130,7 @@ function calculateBlobHeight(
 /**
  * Calculate edge mask for smooth ocean rim
  * Returns 0 at the very border, 1 at MARGIN distance from border
+ * Uses a more gradual falloff to prevent hard cutoffs
  */
 function calculateEdgeMask(
   x: number,
@@ -151,10 +142,27 @@ function calculateEdgeMask(
   // distance to each edge
   const dx = Math.min(x, width - x);
   const dy = Math.min(y, height - y);
-  // normalize to 0 .. 1 over the MARGIN
-  const nx = Math.min(dx / margin, 1);
-  const ny = Math.min(dy / margin, 1);
-  return Math.min(nx, ny);
+  
+  // Use a smaller inner margin for hard cutoff, but gradual falloff beyond that
+  const innerMargin = margin * 0.3; // 30% of the safe zone for hard cutoff
+  const outerMargin = margin; // Full safe zone for gradual falloff
+  
+  // If within inner margin, apply hard cutoff
+  if (dx <= innerMargin || dy <= innerMargin) {
+    const nx = Math.min(dx / innerMargin, 1);
+    const ny = Math.min(dy / innerMargin, 1);
+    return Math.min(nx, ny);
+  }
+  
+  // Beyond inner margin, use gradual falloff to outer margin
+  const nx = Math.min((dx - innerMargin) / (outerMargin - innerMargin), 1);
+  const ny = Math.min((dy - innerMargin) / (outerMargin - innerMargin), 1);
+  
+  // Use smooth interpolation (smoothstep-like)
+  const smoothX = nx * nx * (3 - 2 * nx);
+  const smoothY = ny * ny * (3 - 2 * ny);
+  
+  return Math.min(smoothX, smoothY);
 }
 
 /**

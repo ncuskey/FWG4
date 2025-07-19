@@ -296,13 +296,6 @@ export function buildCoastlinePaths(
     }
   }
 
-  // Print sample segments for each feature
-  console.log("\n--- Coastline Segments by Feature ---");
-  for (const [featureId, featureSegments] of segmentsByFeature.entries()) {
-    console.log(`Feature ID: ${featureId}`);
-    console.table(featureSegments.slice(0, 10)); // Print up to 10 segments
-  }
-  
   // Build boundary for each feature
   for (const feature of features) {
     if (feature.type === 'ocean') continue; // Ocean doesn't need a coastline boundary
@@ -345,19 +338,6 @@ function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] 
     if (!adj.has(k2)) adj.set(k2, []);
     adj.get(k1)!.push(end);
     adj.get(k2)!.push(start);
-  }
-
-  // Debug: check vertex degrees
-  const odd = Array.from(adj.entries())
-    .map(([k,neigh]) => ({vertex:k, degree: neigh.length}))
-    .filter(d => d.degree !== 2);
-  if (odd.length) {
-    console.warn("Odd-degree vertices detected:", odd);
-    odd.forEach(o => {
-      console.groupCollapsed(`Vertex ${o.vertex} has degree ${o.degree}`);
-      console.log("Neighbor coords:", adj.get(o.vertex)!.map(pt=>pt.map(n=>n.toFixed(1)).join(',')));
-      console.groupEnd();
-    });
   }
 
   // 2) Pick the "lowest" vertex to start (min Y, then X)

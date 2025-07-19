@@ -56,28 +56,8 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         applySeaLevel(terrainResult.cells, params.seaLevel);
         console.log('Sea level applied');
         
-        // Debug: Check for any land cells touching the border
-        const EDGE_EPS = 20; // Much larger epsilon to catch edge cells
-        const bad = terrainResult.cells.filter(cell =>
-          cell.isLand &&
-          cell.polygon.some(([x, y]) =>
-            x <= EDGE_EPS || x >= width - EDGE_EPS ||
-            y <= EDGE_EPS || y >= height - EDGE_EPS
-          )
-        );
-
-        if (bad.length) {
-          console.warn(`🔥 ${bad.length} land cells touching the border!`, bad.map(c => c.id));
-          // Log details of first few bad cells
-          bad.slice(0, 3).forEach(cell => {
-            const [cx, cy] = cell.centroid;
-            console.warn(`Bad cell ${cell.id}: centroid(${cx.toFixed(1)}, ${cy.toFixed(1)}), height=${cell.height.toFixed(3)}`);
-          });
-        } else {
-          console.log(`✅ No land cells touching the border - edge masking working correctly`);
-        }
-        
         // Final safety clamp: Force any border-touching cell to water
+        const EDGE_EPS = 10;
         let clampedCount = 0;
         terrainResult.cells.forEach(cell => {
           if (
@@ -88,7 +68,7 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
           ) {
             if (cell.isLand) {
               cell.isLand = false;
-              cell.height = 0; // Also force height to 0
+              cell.height = 0;
               clampedCount++;
             }
           }
@@ -98,108 +78,19 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
           console.log(`🔧 Safety clamp: ${clampedCount} border cells forced to water`);
         }
         
-        // Additional verification: Check ALL cells near borders
-        const nearBorderCells = terrainResult.cells.filter(cell => {
+        // Final safety: Force ALL cells within 50px of borders to be water
+        const finalBorderCheck = terrainResult.cells.filter(cell => {
           const [cx, cy] = cell.centroid;
           return cx <= 50 || cx >= width - 50 || cy <= 50 || cy >= height - 50;
         });
         
-        const landNearBorder = nearBorderCells.filter(cell => cell.isLand);
-        console.log(`🔍 Verification: ${nearBorderCells.length} cells within 50px of border`);
-        console.log(`🔍 Verification: ${landNearBorder.length} of those are land cells`);
-        
-        // Check polygon vertices that extend beyond borders
-        const cellsWithBorderVertices = terrainResult.cells.filter(cell => {
-          if (!cell.polygon || cell.polygon.length < 3) return false;
-          return cell.polygon.some(([x, y]) => 
-            x <= 10 || x >= width - 10 || y <= 10 || y >= height - 10
-          );
-        });
-        
-        const landWithBorderVertices = cellsWithBorderVertices.filter(cell => cell.isLand);
-        console.log(`🔍 Polygon check: ${cellsWithBorderVertices.length} cells have vertices within 10px of border`);
-        console.log(`🔍 Polygon check: ${landWithBorderVertices.length} of those are land cells`);
-        
-        if (landWithBorderVertices.length > 0) {
-          console.warn(`🚨 LAND CELLS WITH BORDER VERTICES:`, landWithBorderVertices.map(c => ({
-            id: c.id,
-            centroid: [c.centroid[0].toFixed(1), c.centroid[1].toFixed(1)],
-            vertices: c.polygon?.map(([x, y]) => [x.toFixed(1), y.toFixed(1)]),
-            height: c.height.toFixed(3),
-            isLand: c.isLand
-          })));
-          
-          // Force these cells to water
-          landWithBorderVertices.forEach(cell => {
-            cell.isLand = false;
-            cell.height = 0;
-          });
-          console.log(`🔧 Forced ${landWithBorderVertices.length} cells with border vertices to water`);
-        }
-        
-        // Final safety: Force ALL cells within 100px of borders to be water
-        const finalBorderCheck = terrainResult.cells.filter(cell => {
-          const [cx, cy] = cell.centroid;
-          return cx <= 100 || cx >= width - 100 || cy <= 100 || cy >= height - 100;
-        });
-        
         const finalLandNearBorder = finalBorderCheck.filter(cell => cell.isLand);
         if (finalLandNearBorder.length > 0) {
-          console.warn(`🚨 FINAL CHECK: ${finalLandNearBorder.length} land cells within 100px of border - forcing to water`);
-          // Analyze which borders are affected
-          const rightBorder = finalLandNearBorder.filter(c => c.centroid[0] >= width - 100);
-          const leftBorder = finalLandNearBorder.filter(c => c.centroid[0] <= 100);
-          const topBorder = finalLandNearBorder.filter(c => c.centroid[1] <= 100);
-          const bottomBorder = finalLandNearBorder.filter(c => c.centroid[1] >= height - 100);
-          
-          console.warn(`🚨 BORDER ANALYSIS: Right=${rightBorder.length}, Left=${leftBorder.length}, Top=${topBorder.length}, Bottom=${bottomBorder.length}`);
-          
-          console.warn(`🚨 DETAILS:`, finalLandNearBorder.map(c => ({
-            id: c.id,
-            centroid: [c.centroid[0].toFixed(1), c.centroid[1].toFixed(1)],
-            height: c.height.toFixed(3),
-            isLand: c.isLand,
-            distanceFromBorder: Math.min(
-              c.centroid[0], 
-              c.centroid[1], 
-              width - c.centroid[0], 
-              height - c.centroid[1]
-            ).toFixed(1),
-            borderSide: c.centroid[0] <= 100 ? 'LEFT' : 
-                       c.centroid[0] >= width - 100 ? 'RIGHT' :
-                       c.centroid[1] <= 100 ? 'TOP' : 'BOTTOM'
-          })));
-          
+          console.log(`🔧 Final safety: ${finalLandNearBorder.length} land cells within 50px of border - forcing to water`);
           finalLandNearBorder.forEach(cell => {
             cell.isLand = false;
             cell.height = 0;
           });
-          
-          // Verify the forcing worked
-          const afterForcing = finalBorderCheck.filter(cell => cell.isLand);
-          console.log(`✅ After forcing: ${afterForcing.length} land cells remain within 100px of border`);
-        }
-        
-        if (landNearBorder.length > 0) {
-          console.warn(`🚨 LAND CELLS NEAR BORDER:`, landNearBorder.map(c => ({
-            id: c.id,
-            centroid: [c.centroid[0].toFixed(1), c.centroid[1].toFixed(1)],
-            height: c.height.toFixed(3),
-            isLand: c.isLand,
-            distanceFromBorder: Math.min(
-              c.centroid[0], 
-              c.centroid[1], 
-              width - c.centroid[0], 
-              height - c.centroid[1]
-            ).toFixed(1)
-          })));
-          
-          // Force these cells to water
-          landNearBorder.forEach(cell => {
-            cell.isLand = false;
-            cell.height = 0;
-          });
-          console.log(`🔧 Forced ${landNearBorder.length} near-border land cells to water`);
         }
         
         // Generate coastlines
@@ -218,22 +109,6 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         console.log('Applying colors...');
         applyColorsToCells(terrainResult.cells, params.seaLevel);
         console.log('Colors applied');
-        
-        // Final verification before rendering
-        const finalRenderCheck = terrainResult.cells.filter(cell => {
-          const [cx, cy] = cell.centroid;
-          return (cx <= 100 || cx >= width - 100 || cy <= 100 || cy >= height - 100) && cell.isLand;
-        });
-        
-        if (finalRenderCheck.length > 0) {
-          console.error(`❌ RENDER ERROR: ${finalRenderCheck.length} land cells still near border before rendering!`);
-          finalRenderCheck.forEach(cell => {
-            cell.isLand = false;
-            cell.height = 0;
-          });
-        } else {
-          console.log(`✅ RENDER READY: No land cells near borders`);
-        }
         
         setCells(terrainResult.cells);
         setFeatures(generatedFeatures);
@@ -258,21 +133,6 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
       const pathData = cell.polygon
         .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point[0]} ${point[1]}`)
         .join(' ') + ' Z';
-      
-      // Debug: Check if this cell is being rendered near borders
-      const hasBorderVertices = cell.polygon.some(([x, y]) => 
-        x <= 10 || x >= width - 10 || y <= 10 || y >= height - 10
-      );
-      
-      if (hasBorderVertices && cell.isLand) {
-        console.warn(`🎨 RENDERING LAND CELL WITH BORDER VERTICES:`, {
-          id: cell.id,
-          centroid: [cell.centroid[0].toFixed(1), cell.centroid[1].toFixed(1)],
-          vertices: cell.polygon.map(([x, y]) => [x.toFixed(1), y.toFixed(1)]),
-          color: cell.color,
-          isLand: cell.isLand
-        });
-      }
       
       return (
         <path
@@ -399,9 +259,6 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
               <rect width={width} height={height} />
             </clipPath>
           </defs>
-          
-          {/* Debug: Show canvas boundaries */}
-          <rect x="0" y="0" width={width} height={height} fill="none" stroke="red" strokeWidth="2" opacity="0.5" />
           
           {/* Water background */}
           <rect width={width} height={height} fill="#1e3a8a" />

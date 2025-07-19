@@ -1,127 +1,134 @@
-# FWG4 - Fantasy Heightmap Generator
+# Fantasy World Generator 4 (FWG4)
 
-A React-based procedural fantasy map heightmap generator inspired by Azgaar's Fantasy Map Generator. This tool generates realistic-looking terrain using Voronoi diagrams and blob algorithms, creating color-coded elevation maps entirely in the browser.
+A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map Generator. Generate beautiful, interactive 2D heightmaps with realistic coastlines and natural terrain.
 
 ## Features
 
-- **Procedural Generation**: Creates unique maps using Voronoi diagrams and blob algorithms
-- **Interactive Controls**: Real-time parameter adjustment for terrain generation
-- **Realistic Terrain**: Uses graph-based heightmap generation for natural-looking coastlines
-- **Automatic Coastlines**: Clear visual separation between land and water with feature classification
-- **Clean Coastline Rendering**: Ordered loop assembly for smooth, professional outlines
-- **Color-Coded Elevation**: Visual representation with blue (water) to white (peaks) color scheme
-- **Responsive Design**: Works on desktop and mobile devices
-- **No Server Required**: Runs entirely in the browser
+### 🌍 **Natural Terrain Generation**
+- **Voronoi-based mesh**: Natural cell distribution using jittered grid sampling
+- **Blob algorithm**: Realistic heightmaps with BFS height propagation
+- **Safe-zone seeding**: Prevents terrain from spilling over map edges
+- **Gradual edge masking**: Smooth ocean rim with natural coastlines
 
-## How It Works
+### 🏝️ **Coastline Detection & Rendering**
+- **Automatic coastline detection**: Identifies land-water boundaries
+- **Feature classification**: Distinguishes oceans, lakes, and islands/continents
+- **Natural boundary assembly**: Creates smooth, closed coastline loops
+- **SVG rendering**: Crisp, scalable coastline paths
 
-### Voronoi Mesh Generation
-- Uses jittered grid sampling to create evenly distributed points
-- Generates a Voronoi diagram from these points to create irregular polygonal cells
-- Each cell represents a region of the map with its own elevation
+### 🛡️ **Border Protection System**
+- **Multi-layer safety**: Guarantees no land touches map edges
+- **Gradual falloff**: Natural height transitions near borders
+- **Smooth interpolation**: Eliminates unnatural straight edges
+- **Robust verification**: Multiple safety checks ensure clean borders
 
-### Terrain Generation (Blob Algorithm)
-- Creates multiple "blobs" of terrain starting from random peak points
-- Each blob spreads height to neighboring cells with gradual falloff
-- Adds randomness (sharpness) to create irregular, realistic coastlines
-- Combines multiple blobs to form complex landmasses
+### 🎨 **Interactive Controls**
+- **Real-time generation**: Generate new maps instantly
+- **Parameter adjustment**: Fine-tune terrain characteristics
+- **Responsive layout**: Controls on left, map on right
+- **Visual feedback**: Live feature counts and statistics
 
-### Color Mapping
-- Maps elevation values to colors: deep blue (water) → light blue → green → brown → white (peaks)
-- Applies sea level threshold to distinguish land from water
-- Creates smooth color transitions for natural appearance
+## Technical Architecture
 
-### Coastline Rendering
-- Identifies all land-water boundaries using shared polygon edges
-- Groups coastline segments by geographical feature (island, lake, etc.)
-- Uses adjacency-based graph traversal to assemble segments into ordered, continuous loops
-- Starts from southernmost vertex for consistent loop orientation
-- Renders each feature's coastline as a single SVG path (no crisscrossing lines)
+### Core Technologies
+- **React 18** with TypeScript
+- **Vite** build system
+- **D3.js** for Voronoi diagrams and Delaunay triangulation
+- **SVG** for crisp, scalable rendering
 
-## Controls
+### Key Algorithms
+1. **Voronoi Mesh Generation**: Jittered grid sampling for natural cell distribution
+2. **Blob Terrain**: BFS height propagation with safe-zone constraints
+3. **Coastline Detection**: Unique edge extraction with adjacency graph traversal
+4. **Border Protection**: Multi-layer safety system with gradual edge masking
 
-- **Points**: Number of Voronoi cells (1000-8000) - affects map detail
-- **Blobs**: Number of terrain peaks (1-20) - affects landmass complexity
-- **Falloff**: How quickly height decreases from peaks (0.7-0.95) - affects terrain steepness
-- **Sharpness**: Randomness in height propagation (0-0.3) - affects coastline irregularity
-- **Sea Level**: Height threshold for water (0.1-0.4) - affects land/water ratio
+### Data Structures
+- **Cell**: Voronoi cell with height, isLand, neighbors, polygon, centroid
+- **Feature**: Geographic feature (ocean, lake, island) with boundary and metadata
+- **CoastlineSegment**: Edge segment between land and water cells
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js (version 16 or higher)
+- Node.js 18+ 
 - npm or yarn
 
 ### Installation
+```bash
+git clone https://github.com/ncuskey/FWG4.git
+cd FWG4/fwg4-heightmap
+npm install
+```
 
-1. Clone or download this project
-2. Navigate to the project directory:
-   ```bash
-   cd fwg4-heightmap
-   ```
+### Development
+```bash
+npm run dev
+```
+Open http://localhost:5173 (or the port shown in terminal)
 
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-5. Open your browser and navigate to the URL shown in the terminal (usually `http://localhost:5173`)
-
-### Building for Production
-
+### Build
 ```bash
 npm run build
 ```
 
-This creates a `dist` folder with the production-ready files that can be served by any static file server.
+## Usage
 
-## Technical Details
+### Basic Map Generation
+1. Click "Generate New Map" to create a new heightmap
+2. Adjust parameters using the sliders:
+   - **Points**: Number of Voronoi cells (1000-8000)
+   - **Blobs**: Number of terrain features (1-20)
+   - **Falloff**: Terrain smoothness (0.7-0.95)
+   - **Sharpness**: Terrain randomness (0-0.3)
+   - **Sea Level**: Water level threshold (0.1-0.4)
 
-### Architecture
-- **React 18** with TypeScript for the UI
-- **D3.js** for Voronoi diagram generation and geometric operations
-- **Vite** for fast development and building
-- **CSS Grid/Flexbox** for responsive layout
+### Understanding the Output
+- **Blue areas**: Ocean and water bodies
+- **Green to brown gradients**: Land with elevation-based coloring
+- **Dark outlines**: Coastlines separating land from water
+- **Feature counts**: Displayed in the controls panel
 
-### Key Components
-- `MapGenerator`: Main component that orchestrates the generation process
-- `voronoi.ts`: Handles point sampling and Voronoi diagram creation
-- `terrain.ts`: Implements the blob algorithm for terrain generation
-- `color.ts`: Maps elevation values to colors
-- `coastline.ts`: Generates coastlines and classifies geographical features
+## Project Structure
 
-### Performance
-- Optimized for 3000-8000 cells (good balance of detail and performance)
-- Uses React's `useMemo` and `useCallback` for efficient rendering
-- Asynchronous generation to prevent UI blocking
+```
+fwg4-heightmap/
+├── src/
+│   ├── components/
+│   │   └── MapGenerator.tsx    # Main React component
+│   ├── utils/
+│   │   ├── voronoi.ts          # Voronoi mesh generation
+│   │   ├── terrain.ts          # Terrain generation with blob algorithm
+│   │   ├── coastline.ts        # Coastline detection and assembly
+│   │   └── color.ts            # Color mapping functions
+│   ├── App.tsx                 # Main app component
+│   └── App.css                 # Styling
+├── DEVLOG.md                   # Development history
+├── COASTLINE.md                # Coastline implementation details
+└── README.md                   # This file
+```
 
-## Future Enhancements
+## Development History
 
-- **River Systems**: Water flow simulation ending at coastline segments
-- **Biome Generation**: Add climate and vegetation layers with coastal effects
-- **3D Terrain View**: WebGL rendering for 3D visualization
-- **Coastline Smoothing**: Natural curve interpolation for smoother coastlines
-- **Map Export**: Save generated maps as images
-- **Interactive Editing**: Click to add/remove terrain features
-- **Custom Color Schemes**: User-defined color palettes
+See [DEVLOG.md](DEVLOG.md) for detailed development phases and technical decisions.
 
-## Inspiration
+## Coastline Implementation
 
-This project is inspired by [Azgaar's Fantasy Map Generator](https://azgaar.wordpress.com/), particularly the heightmap generation techniques described in their blog posts about procedural map generation.
-
-## License
-
-This project is open source and available under the MIT License.
+See [COASTLINE.md](COASTLINE.md) for detailed information about the coastline detection and rendering system.
 
 ## Contributing
 
-Feel free to submit issues, feature requests, or pull requests to improve the heightmap generator!
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
----
+## License
 
-*This repository was originally created as FWG4 and has been expanded to include a complete fantasy heightmap generator implementation.*
+MIT License - see LICENSE file for details.
+
+## Acknowledgments
+
+- Inspired by [Azgaar's Fantasy Map Generator](https://azgaar.github.io/Fantasy-Map-Generator/)
+- Built with modern React and TypeScript
+- Uses D3.js for geometric algorithms
