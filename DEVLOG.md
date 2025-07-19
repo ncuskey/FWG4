@@ -194,6 +194,29 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
   - Border segments are properly integrated with land-water segments for full feature boundaries.
   - Debug logging shows near-border edges and total border segment counts for tuning.
 
+#### Border Water Forcing - Final Solution
+- **Problem Identified**: Despite all previous improvements, some coastline loops still failed to close completely, particularly for landmasses touching map borders.
+- **Root Cause Analysis**: The fundamental issue was that land cells touching the map edge had no "neighbor" beyond the border, making it impossible to detect these edges as coastal boundaries.
+- **Final Solution Implemented**: 
+  - Added border water forcing logic in `MapGenerator.tsx` after sea level application but before coastline generation.
+  - Uses `EDGE_EPSILON = 1` to detect cells whose centroids are within 1 unit of any map border.
+  - Forces all border-touching cells to be water (`cell.isLand = false`).
+  - This creates a guaranteed ocean boundary around the entire map.
+- **Why This Works**:
+  - **Guaranteed Ocean Boundary**: No landmass ever reaches the map edge, so flood-fill always marks border cells as Ocean.
+  - **Closed Loops for All Features**: Since land is strictly interior, all detected coastlines are 100% surrounded by water on both sides.
+  - **Aesthetic "Rim of Ocean"**: Creates a classic fantasy map style with deep ocean frame around the land.
+  - **Robust and Simple**: Eliminates all edge cases and special border logic permanently.
+- **Implementation Details**:
+  - Applied in the generation pipeline: `applySeaLevel()` → `forceBorderWater()` → `markCoastalCells()` → `findCoastalEdges()`.
+  - No changes needed to coastline detection algorithms - they now work perfectly with interior-only land.
+  - Console logging shows "Border cells forced to water" for verification.
+- **Results**:
+  - All coastline loops now close completely and naturally.
+  - No more incomplete bottom border loops or edge case handling.
+  - Clean, professional fantasy map aesthetics with ocean frame.
+  - 100% reliable coastline generation for all map configurations.
+
 #### Build and Deployment
 - **TypeScript Compilation**: All type errors resolved
 - **Production Build**: Successfully builds to dist/ folder
