@@ -54,11 +54,16 @@ function interpolateColor(color1: string, color2: string, ratio: number): string
 }
 
 /**
- * Apply colors to all cells based on their heights
+ * Apply colors to all cells based on their heights and land status
  */
 export function applyColorsToCells(cells: Cell[], seaLevel: number): void {
   cells.forEach(cell => {
-    cell.color = heightToColor(cell.height, seaLevel);
+    // If cell is explicitly marked as not land, force it to water color
+    if (cell.isLand === false) {
+      cell.color = HEIGHT_COLORS.deepWater;
+    } else {
+      cell.color = heightToColor(cell.height, seaLevel);
+    }
   });
 }
 
