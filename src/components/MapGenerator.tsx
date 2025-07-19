@@ -113,8 +113,21 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
             id: c.id,
             centroid: [c.centroid[0].toFixed(1), c.centroid[1].toFixed(1)],
             height: c.height.toFixed(3),
-            isLand: c.isLand
+            isLand: c.isLand,
+            distanceFromBorder: Math.min(
+              c.centroid[0], 
+              c.centroid[1], 
+              width - c.centroid[0], 
+              height - c.centroid[1]
+            ).toFixed(1)
           })));
+          
+          // Force these cells to water
+          landNearBorder.forEach(cell => {
+            cell.isLand = false;
+            cell.height = 0;
+          });
+          console.log(`🔧 Forced ${landNearBorder.length} near-border land cells to water`);
         }
         
         // Generate coastlines
