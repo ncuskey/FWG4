@@ -34,8 +34,8 @@ export function generateTerrain(
   const { cells } = mesh;
   const { numBlobs, mainPeakHeight, secondaryPeakHeightRange, falloff, sharpness } = params;
   
-  // Calculate safe zone parameters
-  const MAX_BLOB_RADIUS = 150; // maximum falloff radius of any blob
+  // Calculate safe zone parameters - adjusted for 2:1 aspect ratio
+  const MAX_BLOB_RADIUS = 120; // maximum falloff radius of any blob
   const MARGIN = MAX_BLOB_RADIUS; // safe margin from borders
   
   // Reset all heights to 0
