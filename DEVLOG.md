@@ -134,6 +134,32 @@
   - **Height Variation**: 80-100% of base height for natural contours
 - **Status**: ✅ Complete
 
+## Phase 9: Continental Shape Fixes and Border Integration
+- **Date**: Fixes for perfect circles and invisible borders
+- **Goal**: Create single large continents with visible water borders and natural coastlines
+- **Components**:
+  - **Single Blob Configuration**: Changed from 2 blobs to 1 for unified continental landmass
+  - **Border Carving Integration**: Coastline recomputation after border carving
+  - **Distance Perturbation**: Noise jitter applied to blob distance calculation
+  - **Enhanced Noise Jitter**: Stronger variation for visible coastline effects
+  - **Proper Border Integration**: Coastlines computed from carved terrain
+  - **Natural Continental Outlines**: Organic, irregular continental shapes
+- **Key Improvements**:
+  - **Unified Landmass**: Single large continent instead of two circular landmasses
+  - **Visible Water Borders**: Coastlines include water margin in SVG paths
+  - **Natural Coastline Variation**: Distance perturbation creates jagged, organic outlines
+  - **Stronger Jitter Effects**: 50-100% height variation for visible coastline changes
+  - **Proper Border Handling**: Coastlines trace actual carved boundaries
+  - **Realistic Continental Shapes**: No more perfect circles or invisible borders
+- **Technical Details**:
+  - **Single Blob**: numBlobs = 1 for unified continental generation
+  - **Coastline Recomputation**: Fresh segments and features after border carving
+  - **Distance Perturbation**: ±50% distance shift with 0.02 noise frequency
+  - **Enhanced Height Jitter**: 50-100% range (increased from 80-100%)
+  - **Border Integration**: Coastlines computed from terrain with water margins
+  - **Natural Variation**: Multiple noise effects for organic continental shapes
+- **Status**: ✅ Complete
+
 ## Technical Architecture
 
 ### Core Algorithms

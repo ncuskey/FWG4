@@ -18,7 +18,7 @@ interface MapGeneratorProps {
 }
 
 const DEFAULT_PARAMS: TerrainParams = {
-  numBlobs: 2, // Reduced from 8 for continental generation
+  numBlobs: 1, // Single blob for one big continent instead of two circles
   mainPeakHeight: 1.0,
   secondaryPeakHeightRange: [0.3, 0.7],
   falloff: 2.0, // Reduced from 2.8 for more moderate continental generation
@@ -122,6 +122,13 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         if (carvedCount > 0) {
           console.log(`🌊 Border carving: ${carvedCount} cells forced to water within ${params.waterMargin}px margin`);
         }
+        
+        // Recompute coastlines & features on the carved terrain
+        markCoastalCells(terrainResult.cells);
+        const freshSegments = findCoastalEdges(terrainResult.cells, width, height);
+        const freshFeatures = labelFeatures(terrainResult.cells, width, height);
+        buildCoastlinePaths(freshSegments, freshFeatures, terrainResult.cells);
+        setFeatures(freshFeatures);
         
         // Apply colors
         console.log('Applying colors...');
@@ -319,4 +326,4 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
       </div>
     </div>
   );
-}; 
+};

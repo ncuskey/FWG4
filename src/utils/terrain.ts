@@ -90,7 +90,7 @@ export function generateTerrain(
     for (const blob of blobs) {
       const distance = Math.sqrt((cx - blob.x) ** 2 + (cy - blob.y) ** 2);
       if (distance <= blob.radius) { // Only apply blob contribution within radius
-        const blobHeight = calculateBlobHeight(distance, blob.radius, blob.height, effectiveFalloff, sharpness);
+        const blobHeight = calculateBlobHeight(distance, blob.radius, blob.height, effectiveFalloff, sharpness, cx, cy);
         rawHeight = Math.max(rawHeight, blobHeight);
       }
     }
@@ -111,7 +111,7 @@ export function generateTerrain(
     // 4) Apply noise jitter for natural coastline variation (continental mode only)
     if (continentMode && rawHeight > 0) {
       const noiseValue = simpleNoise2D(cx * 0.005, cy * 0.005); // Low-frequency noise
-      const jitterFactor = 0.8 + 0.2 * noiseValue; // 80-100% of height
+      const jitterFactor = 0.5 + 0.5 * noiseValue; // 50-100% of height (increased from 80-100%)
       cell.height = rawHeight * jitterFactor;
     }
   });
@@ -182,18 +182,29 @@ function simpleNoise2D(x: number, y: number): number {
 /**
  * Calculate blob height at a given distance from blob center
  * Updated to work with higher falloff values for continental generation
+ * Now includes distance perturbation for natural coastline variation
  */
 function calculateBlobHeight(
   distance: number,
   radius: number,
   peakHeight: number,
   falloff: number,
-  sharpness: number
+  sharpness: number,
+  cx?: number, // Optional coordinates for noise jitter
+  cy?: number
 ): number {
   if (distance > radius) return 0;
   
   // Calculate base height using falloff
-  const normalizedDistance = distance / radius;
+  let normalizedDistance = distance / radius;
+  
+  // Apply noise jitter to distance for natural coastline variation (continental mode only)
+  if (cx !== undefined && cy !== undefined && falloff >= 2.0) {
+    const noise = simpleNoise2D(cx * 0.02, cy * 0.02); // Higher-frequency noise
+    const perturb = 1 + (noise - 0.5) * 1.0; // ±50% distance shift
+    const perturbedDistance = Math.min(radius, distance * perturb);
+    normalizedDistance = perturbedDistance / radius;
+  }
   
   // Use different falloff calculation for continental vs island mode
   let baseHeight: number;

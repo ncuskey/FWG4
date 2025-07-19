@@ -13,6 +13,7 @@ A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map G
 - **Adaptive sea level**: Smart height threshold for guaranteed land coverage
 - **Water margin control**: Configurable edge buffer for clean ocean borders
 - **Natural continental shapes**: Irregular, organic landmasses with varied coastlines
+- **Single blob generation**: Unified continental landmasses instead of circular separation
 
 ### 🏝️ **Coastline Detection & Rendering**
 - **Automatic coastline detection**: Identifies land-water boundaries
@@ -22,6 +23,7 @@ A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map G
 - **Robust edge detection**: Unique-edge counting for reliable boundary identification
 - **Open-chain walker**: Handles both closed loops and continental coasts
 - **Natural coastline variation**: Noise jitter creates realistic shoreline contours
+- **Border integration**: Coastlines include water margins and carved boundaries
 
 ### 🛡️ **Border Protection System**
 - **Multi-layer safety**: Guarantees no land touches map edges
@@ -55,6 +57,7 @@ A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map G
 7. **Robust Edge Detection**: Unique-edge counting for reliable boundaries
 8. **Open-Chain Walker**: Handles both closed loops and continental coasts
 9. **Natural Shape Generation**: Varied blob radii and noise jitter for organic forms
+10. **Distance Perturbation**: Noise jitter applied to blob distance for natural coastlines
 
 ### Data Structures
 - **Cell**: Voronoi cell with height, isLand, neighbors, polygon, centroid
