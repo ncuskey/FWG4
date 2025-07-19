@@ -57,7 +57,7 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         console.log('Sea level applied');
         
         // Debug: Check for any land cells touching the border
-        const EDGE_EPS = 0.1;
+        const EDGE_EPS = 20; // Much larger epsilon to catch edge cells
         const bad = terrainResult.cells.filter(cell =>
           cell.isLand &&
           cell.polygon.some(([x, y]) =>
@@ -68,6 +68,11 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
 
         if (bad.length) {
           console.warn(`🔥 ${bad.length} land cells touching the border!`, bad.map(c => c.id));
+          // Log details of first few bad cells
+          bad.slice(0, 3).forEach(cell => {
+            const [cx, cy] = cell.centroid;
+            console.warn(`Bad cell ${cell.id}: centroid(${cx.toFixed(1)}, ${cy.toFixed(1)}), height=${cell.height.toFixed(3)}`);
+          });
         } else {
           console.log(`✅ No land cells touching the border - edge masking working correctly`);
         }
@@ -83,6 +88,7 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
           ) {
             if (cell.isLand) {
               cell.isLand = false;
+              cell.height = 0; // Also force height to 0
               clampedCount++;
             }
           }
