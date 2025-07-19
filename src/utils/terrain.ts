@@ -9,6 +9,13 @@ export interface TerrainParams {
   seaLevel: number;
 }
 
+interface Blob {
+  x: number;
+  y: number;
+  radius: number;
+  height: number;
+}
+
 export interface TerrainGenerationResult {
   cells: Cell[];
   minHeight: number;
@@ -16,35 +23,55 @@ export interface TerrainGenerationResult {
 }
 
 /**
- * Generate terrain using the blob algorithm
+ * Generate terrain using the blob algorithm with safe-zone constraints
  */
 export function generateTerrain(
   mesh: VoronoiMesh,
-  params: TerrainParams
+  params: TerrainParams,
+  width: number,
+  height: number
 ): TerrainGenerationResult {
   const { cells } = mesh;
-  const { numBlobs, mainPeakHeight, secondaryPeakHeightRange, falloff, sharpness, seaLevel } = params;
+  const { numBlobs, mainPeakHeight, secondaryPeakHeightRange, falloff, sharpness } = params;
+  
+  // Calculate safe zone parameters
+  const MAX_BLOB_RADIUS = 150; // maximum falloff radius of any blob
+  const MARGIN = MAX_BLOB_RADIUS; // safe margin from borders
   
   // Reset all heights to 0
   cells.forEach(cell => cell.height = 0);
   
-  // Generate main blob
-  const mainPeakIndex = Math.floor(Math.random() * cells.length);
-  generateBlob(cells, mainPeakIndex, mainPeakHeight, falloff, sharpness);
+  // Generate blobs in safe zone
+  const blobs: Blob[] = [];
   
-  // Generate additional blobs
+  // Main blob
+  const mainBlob = generateRandomBlobInSafeZone(width, height, MARGIN, MAX_BLOB_RADIUS, mainPeakHeight);
+  blobs.push(mainBlob);
+  
+  // Secondary blobs
   for (let i = 1; i < numBlobs; i++) {
     const peakHeight = secondaryPeakHeightRange[0] + 
       Math.random() * (secondaryPeakHeightRange[1] - secondaryPeakHeightRange[0]);
-    
-    // Pick a random cell that's mostly water (low height)
-    const waterCells = cells.filter(cell => cell.height < seaLevel * 0.5);
-    if (waterCells.length > 0) {
-      const randomWaterCell = waterCells[Math.floor(Math.random() * waterCells.length)];
-      const peakIndex = cells.findIndex(cell => cell.id === randomWaterCell.id);
-      generateBlob(cells, peakIndex, peakHeight, falloff, sharpness);
-    }
+    const blob = generateRandomBlobInSafeZone(width, height, MARGIN, MAX_BLOB_RADIUS, peakHeight);
+    blobs.push(blob);
   }
+  
+  // Apply blob heights to all cells
+  cells.forEach(cell => {
+    const [cx, cy] = cell.centroid;
+    
+    // Calculate height from all blobs
+    let maxHeight = 0;
+    for (const blob of blobs) {
+      const distance = Math.sqrt((cx - blob.x) ** 2 + (cy - blob.y) ** 2);
+      const blobHeight = calculateBlobHeight(distance, blob.radius, blob.height, falloff, sharpness);
+      maxHeight = Math.max(maxHeight, blobHeight);
+    }
+    
+    // Apply edge mask for smooth ocean rim
+    const edgeMask = calculateEdgeMask(cx, cy, width, height, MARGIN);
+    cell.height = maxHeight * edgeMask;
+  });
   
   // Find min/max heights
   const heights = cells.map(cell => cell.height);
@@ -59,51 +86,58 @@ export function generateTerrain(
 }
 
 /**
- * Generate a single blob of terrain starting from a peak
+ * Generate a random blob within the safe zone
  */
-function generateBlob(
-  cells: Cell[],
-  peakIndex: number,
+function generateRandomBlobInSafeZone(
+  width: number,
+  height: number,
+  margin: number,
+  maxRadius: number,
+  peakHeight: number
+): Blob {
+  const radius = Math.random() * maxRadius;
+  const x = margin + Math.random() * (width - 2 * margin);
+  const y = margin + Math.random() * (height - 2 * margin);
+  
+  return { x, y, radius, height: peakHeight };
+}
+
+/**
+ * Calculate blob height at a given distance from blob center
+ */
+function calculateBlobHeight(
+  distance: number,
+  radius: number,
   peakHeight: number,
   falloff: number,
   sharpness: number
-): void {
-  const queue: { cellIndex: number; height: number }[] = [
-    { cellIndex: peakIndex, height: peakHeight }
-  ];
+): number {
+  if (distance > radius) return 0;
   
-  const visited = new Set<number>();
+  // Calculate base height using falloff
+  const normalizedDistance = distance / radius;
+  const baseHeight = peakHeight * Math.pow(falloff, normalizedDistance * 10);
   
-  while (queue.length > 0) {
-    const { cellIndex, height } = queue.shift()!;
-    
-    if (visited.has(cellIndex) || height < 0.01) {
-      continue;
-    }
-    
-    visited.add(cellIndex);
-    
-    // Only update if new height is greater than current height
-    if (height > cells[cellIndex].height) {
-      cells[cellIndex].height = height;
-    }
-    
-    // Propagate to neighbors
-    const cell = cells[cellIndex];
-    for (const neighborId of cell.neighbors) {
-      const neighborIndex = cells.findIndex(c => c.id === neighborId);
-      if (neighborIndex !== -1 && !visited.has(neighborIndex)) {
-        // Apply falloff with randomness
-        const randomFactor = 1 + (Math.random() - 0.5) * sharpness * 2;
-        const newHeight = height * falloff * randomFactor;
-        
-        queue.push({
-          cellIndex: neighborIndex,
-          height: newHeight
-        });
-      }
-    }
-  }
+  // Apply sharpness (randomness)
+  const randomFactor = 1 + (Math.random() - 0.5) * sharpness * 2;
+  
+  return baseHeight * randomFactor;
+}
+
+/**
+ * Calculate edge mask for smooth ocean rim
+ */
+function calculateEdgeMask(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  margin: number
+): number {
+  const dx = Math.min(x, width - x) / margin;
+  const dy = Math.min(y, height - y) / margin;
+  // dx, dy go 0→1 as you move from border to margin inside
+  return Math.min(dx, dy, 1);
 }
 
 /**
