@@ -137,6 +137,21 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
           console.log(`🔧 Forced ${landWithBorderVertices.length} cells with border vertices to water`);
         }
         
+        // Final safety: Force ALL cells within 100px of borders to be water
+        const finalBorderCheck = terrainResult.cells.filter(cell => {
+          const [cx, cy] = cell.centroid;
+          return cx <= 100 || cx >= width - 100 || cy <= 100 || cy >= height - 100;
+        });
+        
+        const finalLandNearBorder = finalBorderCheck.filter(cell => cell.isLand);
+        if (finalLandNearBorder.length > 0) {
+          console.warn(`🚨 FINAL CHECK: ${finalLandNearBorder.length} land cells within 100px of border - forcing to water`);
+          finalLandNearBorder.forEach(cell => {
+            cell.isLand = false;
+            cell.height = 0;
+          });
+        }
+        
         if (landNearBorder.length > 0) {
           console.warn(`🚨 LAND CELLS NEAR BORDER:`, landNearBorder.map(c => ({
             id: c.id,
