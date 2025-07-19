@@ -11,18 +11,23 @@ A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map G
 - **Gradual edge masking**: Smooth ocean rim with natural coastlines
 - **Continental mode**: Generate large continents or scattered islands
 - **Adaptive sea level**: Smart height threshold for guaranteed land coverage
+- **Water margin control**: Configurable edge buffer for clean ocean borders
 
 ### 🏝️ **Coastline Detection & Rendering**
 - **Automatic coastline detection**: Identifies land-water boundaries
 - **Feature classification**: Distinguishes oceans, lakes, and islands/continents
 - **Natural boundary assembly**: Creates smooth, closed coastline loops
 - **SVG rendering**: Crisp, scalable coastline paths
+- **Robust edge detection**: Unique-edge counting for reliable boundary identification
+- **Open-chain walker**: Handles both closed loops and continental coasts
 
 ### 🛡️ **Border Protection System**
 - **Multi-layer safety**: Guarantees no land touches map edges
 - **Gradual falloff**: Natural height transitions near borders
 - **Smooth interpolation**: Eliminates unnatural straight edges
 - **Robust verification**: Multiple safety checks ensure clean borders
+- **Water margin control**: Configurable edge buffer (0-100px)
+- **Border carving**: Applied after coastline computation for true geometry
 
 ### 🎨 **Interactive Controls**
 - **Real-time generation**: Generate new maps instantly
@@ -45,6 +50,8 @@ A React-based fantasy map heightmap generator inspired by Azgaar's Fantasy Map G
 4. **Border Protection**: Multi-layer safety system with gradual edge masking
 5. **Continental Generation**: Low-frequency terrain with adaptive sea level
 6. **Tiny Island Removal**: Post-processing to eliminate small features
+7. **Robust Edge Detection**: Unique-edge counting for reliable boundaries
+8. **Open-Chain Walker**: Handles both closed loops and continental coasts
 
 ### Data Structures
 - **Cell**: Voronoi cell with height, isLand, neighbors, polygon, centroid
@@ -85,6 +92,7 @@ npm run build
    - **Falloff**: Terrain smoothness (0.7-4.0, higher for gentle plateaus)
    - **Sharpness**: Terrain randomness (0-0.3)
    - **Sea Level**: Water level threshold (0.1-0.4)
+   - **Water Margin**: Edge buffer for ocean borders (0-100px)
 3. **Continental Mode**: Toggle for large continents vs scattered islands
 
 ### Understanding the Output

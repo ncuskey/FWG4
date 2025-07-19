@@ -24,7 +24,8 @@ const DEFAULT_PARAMS: TerrainParams = {
   falloff: 2.0, // Reduced from 2.8 for more moderate continental generation
   sharpness: 0.1,
   seaLevel: 0.15, // Reduced from 0.2 to ensure more land appears
-  continentMode: true // Enable continental generation by default
+  continentMode: true, // Enable continental generation by default
+  waterMargin: 50 // New parameter for edge buffer
 };
 
 export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => {
@@ -56,43 +57,6 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         console.log('Applying sea level...');
         applySeaLevel(terrainResult.cells, params.seaLevel, params.continentMode);
         console.log('Sea level applied');
-        
-        // Final safety clamp: Force any border-touching cell to water
-        const EDGE_EPS = 10;
-        let clampedCount = 0;
-        terrainResult.cells.forEach(cell => {
-          if (
-            cell.polygon.some(([x, y]) =>
-              x <= EDGE_EPS || x >= width - EDGE_EPS ||
-              y <= EDGE_EPS || y >= height - EDGE_EPS
-            )
-          ) {
-            if (cell.isLand) {
-              cell.isLand = false;
-              cell.height = 0;
-              clampedCount++;
-            }
-          }
-        });
-        
-        if (clampedCount > 0) {
-          console.log(`🔧 Safety clamp: ${clampedCount} border cells forced to water`);
-        }
-        
-        // Final safety: Force ALL cells within 50px of borders to be water
-        const finalBorderCheck = terrainResult.cells.filter(cell => {
-          const [cx, cy] = cell.centroid;
-          return cx <= 50 || cx >= width - 50 || cy <= 50 || cy >= height - 50;
-        });
-        
-        const finalLandNearBorder = finalBorderCheck.filter(cell => cell.isLand);
-        if (finalLandNearBorder.length > 0) {
-          console.log(`🔧 Final safety: ${finalLandNearBorder.length} land cells within 50px of border - forcing to water`);
-          finalLandNearBorder.forEach(cell => {
-            cell.isLand = false;
-            cell.height = 0;
-          });
-        }
         
         // Generate coastlines
         console.log('Generating coastlines...');
@@ -134,6 +98,29 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         } else {
           buildCoastlinePaths(coastalSegments, generatedFeatures, terrainResult.cells);
           setFeatures(generatedFeatures);
+        }
+        
+        // Border carving: Carve out water border after coastline computation
+        // This ensures coastlines are computed from true land geometry
+        let carvedCount = 0;
+        terrainResult.cells.forEach(cell => {
+          const [cx, cy] = cell.centroid;
+          if (
+            cx < params.waterMargin ||
+            cx > width - params.waterMargin ||
+            cy < params.waterMargin ||
+            cy > height - params.waterMargin
+          ) {
+            if (cell.isLand) {
+              cell.isLand = false;
+              cell.height = 0;
+              carvedCount++;
+            }
+          }
+        });
+        
+        if (carvedCount > 0) {
+          console.log(`🌊 Border carving: ${carvedCount} cells forced to water within ${params.waterMargin}px margin`);
         }
         
         // Apply colors
@@ -270,6 +257,19 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
             />
           </div>
           
+          <div className="param-group">
+            <label>Water Margin: {params.waterMargin}</label>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={params.waterMargin}
+              onChange={(e) => setParams(prev => ({ ...prev, waterMargin: Number(e.target.value) }))}
+            />
+            <small>Buffer around map edges to ensure water</small>
+          </div>
+
           <div className="param-group">
             <label className="checkbox-label">
               <input

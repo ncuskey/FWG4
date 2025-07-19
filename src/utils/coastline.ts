@@ -23,28 +23,65 @@ export interface Feature {
 }
 
 /**
- * Find all coastal edges (edges between land and water cells)
+ * Find coastal edges using unique-edge counting method
+ * More robust than shared edge detection
  */
 export function findCoastalEdges(cells: Cell[]): CoastlineSegment[] {
   const segments: CoastlineSegment[] = [];
+  const edgeMap = new Map<string, number>(); // key = "x1,y1|x2,y2", count occurrences
   
-  for (const landCell of cells) {
-    if (!landCell.isLand) continue;
+  // Build edge map: count occurrences of each edge across all land-cell polygons
+  for (const cell of cells) {
+    if (!cell.isLand || !cell.polygon || cell.polygon.length < 3) continue;
     
-    for (const neighborId of landCell.neighbors) {
-      const neighbor = cells.find(c => c.id === neighborId);
-      if (!neighbor || neighbor.isLand) continue;
+    const polygon = cell.polygon;
+    for (let i = 0; i < polygon.length; i++) {
+      const start = polygon[i];
+      const end = polygon[(i + 1) % polygon.length];
       
-      // Found a coastal edge: land cell adjacent to water cell
-      // We need to find the shared edge between these two cells
-      const edge = findSharedEdge(landCell, neighbor);
-      if (edge) {
-        segments.push({
-          start: edge.start,
-          end: edge.end,
-          landCellId: landCell.id,
-          waterCellId: neighbor.id
-        });
+      // Create normalized edge key (sorted coordinates)
+      const [x1, y1] = start;
+      const [x2, y2] = end;
+      const key = x1 < x2 || (x1 === x2 && y1 < y2) 
+        ? `${x1.toFixed(2)},${y1.toFixed(2)}|${x2.toFixed(2)},${y2.toFixed(2)}`
+        : `${x2.toFixed(2)},${y2.toFixed(2)}|${x1.toFixed(2)},${y1.toFixed(2)}`;
+      
+      edgeMap.set(key, (edgeMap.get(key) || 0) + 1);
+    }
+  }
+  
+  // Find edges that appear only once (unique edges = coastline)
+  for (const [edgeKey, count] of edgeMap.entries()) {
+    if (count === 1) {
+      const [startStr, endStr] = edgeKey.split('|');
+      const start = startStr.split(',').map(Number) as [number, number];
+      const end = endStr.split(',').map(Number) as [number, number];
+      
+      // Find the land cell that contains this edge
+      const landCell = cells.find(cell => 
+        cell.isLand && 
+        cell.polygon && 
+        cell.polygon.some((point, i) => {
+          const nextPoint = cell.polygon![(i + 1) % cell.polygon!.length];
+          return (point[0] === start[0] && point[1] === start[1] && 
+                  nextPoint[0] === end[0] && nextPoint[1] === end[1]) ||
+                 (point[0] === end[0] && point[1] === end[1] && 
+                  nextPoint[0] === start[0] && nextPoint[1] === start[1]);
+        })
+      );
+      
+      if (landCell) {
+        // Find the water cell on the other side of this edge
+        const waterCell = findAdjacentWaterCell(landCell, start, end, cells);
+        
+        if (waterCell) {
+          segments.push({
+            start,
+            end,
+            landCellId: landCell.id,
+            waterCellId: waterCell.id
+          });
+        }
       }
     }
   }
@@ -53,17 +90,35 @@ export function findCoastalEdges(cells: Cell[]): CoastlineSegment[] {
 }
 
 /**
- * Find the shared edge between two adjacent cells using set intersection
+ * Find a water cell adjacent to the given edge
  */
-function findSharedEdge(cell1: Cell, cell2: Cell): { start: [number,number], end: [number,number] } | null {
-  // Create a Set of vertex‐strings from cell1
-  const set1 = new Set(cell1.polygon.map(v => v.join(',')));
-  // Filter cell2’s polygon for any vertices in set1
-  const common = cell2.polygon.filter(v => set1.has(v.join(',')));
-  if (common.length >= 2) {
-    // Return the first two distinct points
-    return { start: common[0], end: common[1] };
+function findAdjacentWaterCell(
+  landCell: Cell, 
+  edgeStart: [number, number], 
+  edgeEnd: [number, number], 
+  cells: Cell[]
+): Cell | null {
+  // Check neighbors of the land cell
+  for (const neighborId of landCell.neighbors) {
+    const neighbor = cells.find(c => c.id === neighborId);
+    if (neighbor && !neighbor.isLand) {
+      // Check if this neighbor shares the edge
+      if (neighbor.polygon) {
+        for (let i = 0; i < neighbor.polygon.length; i++) {
+          const point = neighbor.polygon[i];
+          const nextPoint = neighbor.polygon[(i + 1) % neighbor.polygon.length];
+          
+          if ((point[0] === edgeStart[0] && point[1] === edgeStart[1] && 
+               nextPoint[0] === edgeEnd[0] && nextPoint[1] === edgeEnd[1]) ||
+              (point[0] === edgeEnd[0] && point[1] === edgeEnd[1] && 
+               nextPoint[0] === edgeStart[0] && nextPoint[1] === edgeStart[1])) {
+            return neighbor;
+          }
+        }
+      }
+    }
   }
+  
   return null;
 }
 
@@ -308,80 +363,102 @@ export function buildCoastlinePaths(
 }
 
 /**
- * Assemble segments into a continuous closed loop using adjacency-map walker
+ * Assemble segments into a continuous path using open-chain walker
+ * Handles both closed loops and open chains (continental coasts)
  */
 function assembleBoundaryLoop(segments: CoastlineSegment[]): [number, number][] {
   if (segments.length === 0) return [];
-
-  // Dedupe segments by rounded start/end keys
+  
+  const PRECISION = 2;
+  
+  function norm([x, y]: [number, number]): string {
+    return `${x.toFixed(PRECISION)},${y.toFixed(PRECISION)}`;
+  }
+  
+  // 1) Dedupe by normalized keys
   const seen = new Set<string>();
   const dedupedSegments: CoastlineSegment[] = [];
+  
   for (const seg of segments) {
-    const k1 = `${seg.start[0].toFixed(PRECISION)},${seg.start[1].toFixed(PRECISION)}|${seg.end[0].toFixed(PRECISION)},${seg.end[1].toFixed(PRECISION)}`;
-    const k2 = `${seg.end[0].toFixed(PRECISION)},${seg.end[1].toFixed(PRECISION)}|${seg.start[0].toFixed(PRECISION)},${seg.start[1].toFixed(PRECISION)}`;
+    const k1 = `${norm(seg.start)}|${norm(seg.end)}`;
+    const k2 = `${norm(seg.end)}|${norm(seg.start)}`;
     if (!seen.has(k1) && !seen.has(k2)) {
       seen.add(k1);
       seen.add(k2);
       dedupedSegments.push(seg);
     }
   }
-  segments = dedupedSegments;
-
-  // 1) Build adjacency map of vertex→[neighborVertices]
+  
+  if (dedupedSegments.length === 0) return [];
+  
+  // 2) Build Map<vertexKey, neighborPoints>
   const adj = new Map<string, [number, number][]>();
-  function key(p: [number, number]) { 
-    return `${p[0].toFixed(PRECISION)},${p[1].toFixed(PRECISION)}`; 
-  }
-  for (const {start, end} of segments) {
-    const k1 = key(start), k2 = key(end);
+  
+  for (const { start, end } of dedupedSegments) {
+    const k1 = norm(start), k2 = norm(end);
     if (!adj.has(k1)) adj.set(k1, []);
     if (!adj.has(k2)) adj.set(k2, []);
     adj.get(k1)!.push(end);
     adj.get(k2)!.push(start);
   }
-
-  // 2) Pick the "lowest" vertex to start (min Y, then X)
-  const verts = Array.from(adj.entries()).map(([k, neigh]) => {
-    const [x, y] = k.split(',').map(Number);
-    return {key: k, x, y, neighbors: neigh};
-  });
   
-  if (verts.length === 0) {
-    return [];
+  // 3) Find endpoints (degree === 1)
+  const endpoints: string[] = [];
+  for (const [vertex, neighbors] of adj.entries()) {
+    if (neighbors.length === 1) {
+      endpoints.push(vertex);
+    }
   }
   
-  verts.sort((a, b) => a.y - b.y || a.x - b.x);
-  const start = verts[0].key;
-
-  // 3) Walk the cycle
-  const loop: [number, number][] = [];
+  // 4) Pick start: first endpoint if two exist, else lowest (minY, minX)
+  let startKey: string;
+  if (endpoints.length >= 2) {
+    // Open chain - start from first endpoint
+    startKey = endpoints[0];
+  } else {
+    // Closed loop - pick lowest vertex
+    const verts = Array.from(adj.entries()).map(([k, neigh]) => {
+      const [x, y] = k.split(',').map(Number);
+      return { key: k, x, y, neighbors: neigh };
+    });
+    
+    if (verts.length === 0) return [];
+    
+    verts.sort((a, b) => a.y - b.y || a.x - b.x);
+    startKey = verts[0].key;
+  }
+  
+  // 5) Walk: at each step pick neighbor ≠ prevKey; stop on no neighbor (open) or back to start (closed)
+  const path: [number, number][] = [];
   let prevKey: string | null = null;
-  let currKey = start;
-
+  let currKey = startKey;
+  const visited = new Set<string>();
+  
   do {
-    // push current point
+    // Add current point to path
     const [cx, cy] = currKey.split(',').map(Number);
-    loop.push([cx, cy]);
-
-    const neigh = adj.get(currKey)!;
-    // pick the next vertex that isn't the one we just came from
-    const nextKey = neigh
-      .map(p => key(p))
-      .find(k => k !== prevKey);
-
+    path.push([cx, cy]);
+    visited.add(currKey);
+    
+    const neighbors = adj.get(currKey)!;
+    // Pick the next vertex that isn't the one we just came from
+    const nextKey = neighbors
+      .map(p => norm(p))
+      .find(k => k !== prevKey && !visited.has(k));
+    
     // Safety check - if no valid next key, break to avoid infinite loop
     if (!nextKey) {
       break;
     }
-
+    
     prevKey = currKey;
     currKey = nextKey;
-
+    
     // Safety to avoid infinite loop
-    if (loop.length > segments.length + 2) break;
-  } while (currKey !== start);
-
-  return loop;
+    if (path.length > dedupedSegments.length + 2) break;
+  } while (currKey !== startKey && !visited.has(currKey));
+  
+  return path;
 }
 
 /**

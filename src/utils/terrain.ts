@@ -8,6 +8,7 @@ export interface TerrainParams {
   sharpness: number;
   seaLevel: number;
   continentMode: boolean; // New parameter for continental generation
+  waterMargin: number; // New parameter for edge buffer
 }
 
 interface Blob {
@@ -24,8 +25,8 @@ export interface TerrainGenerationResult {
 }
 
 /**
- * Generate terrain using the blob algorithm with safe-zone constraints
- * Now supports continental mode for large landmasses
+ * Generate terrain using the blob algorithm with improved edge protection
+ * Now uses separate blob radius and water margin for better control
  */
 export function generateTerrain(
   mesh: VoronoiMesh,
@@ -34,14 +35,17 @@ export function generateTerrain(
   height: number
 ): TerrainGenerationResult {
   const { cells } = mesh;
-  const { numBlobs, mainPeakHeight, secondaryPeakHeightRange, falloff, sharpness, continentMode } = params;
+  const { numBlobs, mainPeakHeight, secondaryPeakHeightRange, falloff, sharpness, continentMode, waterMargin } = params;
   
-  // Calculate safe zone parameters - dynamically computed for canvas dimensions
+  // Calculate safe zone parameters with separate blob radius and water margin
   const MAX_BLOB_RADIUS = Math.min(width, height) * 0.15; // 15% of smaller dimension
-  const MARGIN = MAX_BLOB_RADIUS; // safe margin from borders
+  const effectiveRadius = continentMode ? MAX_BLOB_RADIUS * 2.0 : MAX_BLOB_RADIUS;
+  const blobRadius = effectiveRadius; // Blob influence radius
+  const totalMargin = blobRadius + waterMargin; // Total safe zone
   
   console.log(`Canvas dimensions: ${width}x${height}`);
-  console.log(`Safe zone: MAX_BLOB_RADIUS=${MAX_BLOB_RADIUS.toFixed(1)}px, MARGIN=${MARGIN.toFixed(1)}px`);
+  console.log(`Blob radius: ${blobRadius.toFixed(1)}px, Water margin: ${waterMargin.toFixed(1)}px`);
+  console.log(`Total margin: ${totalMargin.toFixed(1)}px`);
   console.log(`Continent mode: ${continentMode ? 'enabled' : 'disabled'}`);
   
   // Reset all heights to 0
@@ -49,21 +53,20 @@ export function generateTerrain(
   
   // Adjust parameters for continental mode
   const effectiveNumBlobs = continentMode ? Math.max(1, Math.min(3, numBlobs)) : numBlobs;
-  const effectiveFalloff = continentMode ? Math.max(1.5, Math.min(3.0, falloff)) : falloff; // Reduced max falloff
-  const effectiveRadius = continentMode ? MAX_BLOB_RADIUS * 2.0 : MAX_BLOB_RADIUS; // Reduced from 2.5x to 2.0x
+  const effectiveFalloff = continentMode ? Math.max(1.5, Math.min(3.0, falloff)) : falloff;
   
-  // Generate blobs in safe zone
+  // Generate blobs in safe zone using totalMargin
   const blobs: Blob[] = [];
   
   // Main blob
-  const mainBlob = generateRandomBlobInSafeZone(width, height, MARGIN, effectiveRadius, mainPeakHeight);
+  const mainBlob = generateRandomBlobInSafeZone(width, height, totalMargin, blobRadius, mainPeakHeight);
   blobs.push(mainBlob);
   
   // Secondary blobs (fewer in continental mode)
   for (let i = 1; i < effectiveNumBlobs; i++) {
     const peakHeight = secondaryPeakHeightRange[0] + 
       Math.random() * (secondaryPeakHeightRange[1] - secondaryPeakHeightRange[0]);
-    const blob = generateRandomBlobInSafeZone(width, height, MARGIN, effectiveRadius, peakHeight);
+    const blob = generateRandomBlobInSafeZone(width, height, totalMargin, blobRadius, peakHeight);
     blobs.push(blob);
   }
   
@@ -72,16 +75,18 @@ export function generateTerrain(
   const mapCenterY = height / 2;
   const mapDiagonal = Math.sqrt(width * width + height * height);
   
-  // Apply blob heights to all cells with edge masking and radial mask
+  // Apply blob heights to all cells - only within blobRadius, no edge masking yet
   cells.forEach(cell => {
     const [cx, cy] = cell.centroid;
     
-    // 1) Compute raw height from all blobs
+    // 1) Compute raw height from all blobs (only within blobRadius)
     let rawHeight = 0;
     for (const blob of blobs) {
       const distance = Math.sqrt((cx - blob.x) ** 2 + (cy - blob.y) ** 2);
-      const blobHeight = calculateBlobHeight(distance, blob.radius, blob.height, effectiveFalloff, sharpness);
-      rawHeight = Math.max(rawHeight, blobHeight);
+      if (distance <= blobRadius) { // Only apply blob contribution within radius
+        const blobHeight = calculateBlobHeight(distance, blob.radius, blob.height, effectiveFalloff, sharpness);
+        rawHeight = Math.max(rawHeight, blobHeight);
+      }
     }
     
     // 2) Apply radial mask for continental mode (optional island mask)
@@ -92,9 +97,8 @@ export function generateTerrain(
       rawHeight *= radialMask;
     }
     
-    // 3) Apply edge mask - guarantees zero height at borders
-    const mask = calculateEdgeMask(cx, cy, width, height, MARGIN);
-    cell.height = rawHeight * mask;
+    // 3) Store raw height - no edge masking yet, preserve true land geometry
+    cell.height = rawHeight;
   });
   
   // Find min/max heights
@@ -174,44 +178,6 @@ function calculateBlobHeight(
   const randomFactor = 1 + (Math.random() - 0.5) * effectiveSharpness * 2;
   
   return baseHeight * randomFactor;
-}
-
-/**
- * Calculate edge mask for smooth ocean rim
- * Returns 0 at the very border, 1 at MARGIN distance from border
- * Uses a more gradual falloff to prevent hard cutoffs
- */
-function calculateEdgeMask(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  margin: number
-): number {
-  // distance to each edge
-  const dx = Math.min(x, width - x);
-  const dy = Math.min(y, height - y);
-  
-  // Use a smaller inner margin for hard cutoff, but gradual falloff beyond that
-  const innerMargin = margin * 0.3; // 30% of the safe zone for hard cutoff
-  const outerMargin = margin; // Full safe zone for gradual falloff
-  
-  // If within inner margin, apply hard cutoff
-  if (dx <= innerMargin || dy <= innerMargin) {
-    const nx = Math.min(dx / innerMargin, 1);
-    const ny = Math.min(dy / innerMargin, 1);
-    return Math.min(nx, ny);
-  }
-  
-  // Beyond inner margin, use gradual falloff to outer margin
-  const nx = Math.min((dx - innerMargin) / (outerMargin - innerMargin), 1);
-  const ny = Math.min((dy - innerMargin) / (outerMargin - innerMargin), 1);
-  
-  // Use smooth interpolation (smoothstep-like)
-  const smoothX = nx * nx * (3 - 2 * nx);
-  const smoothY = ny * ny * (3 - 2 * ny);
-  
-  return Math.min(smoothX, smoothY);
 }
 
 /**

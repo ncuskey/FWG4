@@ -82,6 +82,32 @@
   - **Radial Mask**: Quadratic falloff from center for island-style generation
 - **Status**: ✅ Complete
 
+## Phase 7: Robust Coastline System and Improved Edge Protection
+- **Date**: Robust coastline detection and edge protection implementation
+- **Goal**: Ensure blobs never leak to edges, compute true coastlines, and use robust edge detection
+- **Components**:
+  - **Improved Blob Placement**: Separate blob radius and water margin with total margin calculation
+  - **Unique-Edge Coastline Detection**: Edge counting method for robust boundary identification
+  - **Open-Chain Walker**: Handles both closed loops (islands) and open chains (continental coasts)
+  - **Border Carving in Render Step**: Clean separation of generation and edge protection
+  - **Water Margin Control**: Configurable edge buffer (0-100px) via UI slider
+  - **True Geometry Preservation**: Coastlines computed from actual terrain before border carving
+- **Key Improvements**:
+  - **No Terrain Leakage**: Blobs placed within totalMargin (blobRadius + waterMargin)
+  - **Robust Coastline Detection**: Unique-edge counting catches all boundaries
+  - **Smooth Coastline Paths**: Open-chain walker eliminates crisscrossing
+  - **Clean Edge Protection**: Guaranteed water borders with configurable margin
+  - **Precise Floating-Point Handling**: Normalized keys for consistent edge matching
+  - **Separation of Concerns**: Generation vs. rendering properly separated
+- **Technical Details**:
+  - **Edge Counting Algorithm**: Counts edge occurrences across all land cells
+  - **Unique Edge Identification**: Only edges with count === 1 are coastlines
+  - **Endpoint Detection**: Degree-1 vertices for open chain identification
+  - **Smart Start Selection**: Endpoints for open chains, lowest vertex for closed loops
+  - **Border Carving**: Applied after coastline computation using waterMargin parameter
+  - **Normalized Edge Keys**: Sorted coordinates with 2-decimal precision
+- **Status**: ✅ Complete
+
 ## Technical Architecture
 
 ### Core Algorithms
