@@ -146,10 +146,27 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         const finalLandNearBorder = finalBorderCheck.filter(cell => cell.isLand);
         if (finalLandNearBorder.length > 0) {
           console.warn(`🚨 FINAL CHECK: ${finalLandNearBorder.length} land cells within 100px of border - forcing to water`);
+          console.warn(`🚨 DETAILS:`, finalLandNearBorder.map(c => ({
+            id: c.id,
+            centroid: [c.centroid[0].toFixed(1), c.centroid[1].toFixed(1)],
+            height: c.height.toFixed(3),
+            isLand: c.isLand,
+            distanceFromBorder: Math.min(
+              c.centroid[0], 
+              c.centroid[1], 
+              width - c.centroid[0], 
+              height - c.centroid[1]
+            ).toFixed(1)
+          })));
+          
           finalLandNearBorder.forEach(cell => {
             cell.isLand = false;
             cell.height = 0;
           });
+          
+          // Verify the forcing worked
+          const afterForcing = finalBorderCheck.filter(cell => cell.isLand);
+          console.log(`✅ After forcing: ${afterForcing.length} land cells remain within 100px of border`);
         }
         
         if (landNearBorder.length > 0) {
@@ -190,6 +207,22 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         console.log('Applying colors...');
         applyColorsToCells(terrainResult.cells, params.seaLevel);
         console.log('Colors applied');
+        
+        // Final verification before rendering
+        const finalRenderCheck = terrainResult.cells.filter(cell => {
+          const [cx, cy] = cell.centroid;
+          return (cx <= 100 || cx >= width - 100 || cy <= 100 || cy >= height - 100) && cell.isLand;
+        });
+        
+        if (finalRenderCheck.length > 0) {
+          console.error(`❌ RENDER ERROR: ${finalRenderCheck.length} land cells still near border before rendering!`);
+          finalRenderCheck.forEach(cell => {
+            cell.isLand = false;
+            cell.height = 0;
+          });
+        } else {
+          console.log(`✅ RENDER READY: No land cells near borders`);
+        }
         
         setCells(terrainResult.cells);
         setFeatures(generatedFeatures);
