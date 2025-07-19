@@ -98,6 +98,25 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
           console.log(`🔧 Safety clamp: ${clampedCount} border cells forced to water`);
         }
         
+        // Additional verification: Check ALL cells near borders
+        const nearBorderCells = terrainResult.cells.filter(cell => {
+          const [cx, cy] = cell.centroid;
+          return cx <= 50 || cx >= width - 50 || cy <= 50 || cy >= height - 50;
+        });
+        
+        const landNearBorder = nearBorderCells.filter(cell => cell.isLand);
+        console.log(`🔍 Verification: ${nearBorderCells.length} cells within 50px of border`);
+        console.log(`🔍 Verification: ${landNearBorder.length} of those are land cells`);
+        
+        if (landNearBorder.length > 0) {
+          console.warn(`🚨 LAND CELLS NEAR BORDER:`, landNearBorder.map(c => ({
+            id: c.id,
+            centroid: [c.centroid[0].toFixed(1), c.centroid[1].toFixed(1)],
+            height: c.height.toFixed(3),
+            isLand: c.isLand
+          })));
+        }
+        
         // Generate coastlines
         console.log('Generating coastlines...');
         markCoastalCells(terrainResult.cells);
