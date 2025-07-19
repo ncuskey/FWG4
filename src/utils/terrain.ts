@@ -150,7 +150,7 @@ export function applySeaLevel(
   width: number, 
   height: number
 ): void {
-  const BORDER_EPSILON = 20; // increased epsilon for larger canvas
+  const BORDER_EPSILON = 50; // much larger epsilon for guaranteed border forcing
   
   let borderCellsForced = 0;
   let totalCells = 0;
@@ -168,9 +168,15 @@ export function applySeaLevel(
       y <= BORDER_EPSILON || y >= height - BORDER_EPSILON
     );
 
-    // 3) final land flag: must be above sea *and* not touch the edge
+    // 3) also check centroid distance as backup
+    const [cx, cy] = cell.centroid;
+    const centroidNearBorder = 
+      cx <= BORDER_EPSILON || cx >= width - BORDER_EPSILON ||
+      cy <= BORDER_EPSILON || cy >= height - BORDER_EPSILON;
+
+    // 4) final land flag: must be above sea *and* not touch the edge *and* centroid not near border
     const wasLand = aboveSea;
-    cell.isLand = aboveSea && !touchesBorder;
+    cell.isLand = aboveSea && !touchesBorder && !centroidNearBorder;
     
     if (wasLand && !cell.isLand) {
       borderCellsForced++;
@@ -183,4 +189,5 @@ export function applySeaLevel(
   });
   
   console.log(`Border forcing: ${borderCellsForced} cells forced to water out of ${totalCells} total cells`);
+  console.log(`Border epsilon: ${BORDER_EPSILON}px, Canvas: ${width}x${height}`);
 } 
