@@ -141,16 +141,21 @@ main {
   flex: 1;
   display: flex;
   justify-content: center;
+  align-items: center;
   background: rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   padding: 1rem;
-  overflow: hidden;
+  overflow: auto;
+  min-height: 500px;
 }
 
 .heightmap {
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   background: #1e3a8a;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 footer {
@@ -187,7 +192,9 @@ footer {
   }
   
   .heightmap {
-    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: auto !important;
     height: auto !important;
   }
 }
