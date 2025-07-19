@@ -10,7 +10,7 @@ function App() {
       </header>
       
       <main>
-        <MapGenerator width={800} height={600} />
+        <MapGenerator width={1000} height={500} />
       </main>
       
       <footer>
