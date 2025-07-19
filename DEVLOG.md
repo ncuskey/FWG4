@@ -226,18 +226,20 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 - **Root Cause Analysis**: The fundamental issue was that land cells touching the map edge had no "neighbor" beyond the border, making it impossible to detect these edges as coastal boundaries.
 - **Final Solution Implemented**: 
   - **Integrated border detection directly into sea-level classification** in `applySeaLevel()` function.
-  - **Tests every polygon vertex** (not just centroid) for border contact using `BORDER_EPSILON = 1`.
-  - **Single classification rule**: `cell.isLand = aboveSea && !touchesBorder`.
+  - **Tests every polygon vertex** (not just centroid) for border contact using `BORDER_EPSILON = 50`.
+  - **Double border check**: Both polygon vertices AND centroid distance from borders.
+  - **Single classification rule**: `cell.isLand = aboveSea && !touchesBorder && !centroidNearBorder`.
   - **Eliminates separate border forcing step** for cleaner, more reliable code.
 - **Why This Works**:
-  - **Rock-Solid Water Frame**: By testing every vertex, any cell that even grazes the map border becomes water.
-  - **No "Ghost" Land**: No little slivers of land can slip through just because their centroid was safely inland.
+  - **Rock-Solid Water Frame**: By testing every vertex AND centroid, any cell near the map border becomes water.
+  - **No "Ghost" Land**: No little slivers of land can slip through with 50px buffer.
   - **Permanent Border Rule**: Border detection is baked into sea-level classification, preventing accidental re-landification.
   - **Guaranteed Closed Loops**: All coastline loops close correctly around interior islands and lakes.
 - **Implementation Details**:
   - **Modified `applySeaLevel(cells, seaLevel, width, height)`** to accept map dimensions.
   - **Vertex-by-vertex border testing**: `poly.some(([x,y]) => x <= BORDER_EPSILON || x >= width - BORDER_EPSILON || y <= BORDER_EPSILON || y >= height - BORDER_EPSILON)`.
-  - **Single-step classification**: Height check + border check = final land/water status.
+  - **Centroid distance check**: Backup check for cell centroid distance from borders.
+  - **Enhanced debugging**: Console logs show cells forced to water and canvas dimensions.
   - **Cleaner pipeline**: `applySeaLevel()` → `markCoastalCells()` → `findCoastalEdges()`.
 - **Results**:
   - **100% reliable border water forcing** - no land ever reaches map edges.
@@ -245,10 +247,21 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
   - **Clean, professional fantasy map aesthetics** with guaranteed ocean rim.
   - **Simplified codebase** with integrated border logic.
 
+#### Current Project State - Final Implementation
+- **Canvas Size**: 1000x500 pixels (2:1 aspect ratio for paper map style)
+- **Default Points**: 8000 Voronoi cells for high detail
+- **Safe Zone**: 120px margin with 120px max blob radius
+- **Border Forcing**: 50px epsilon with double-check (vertices + centroid)
+- **Layout**: Left-side controls panel (300px) with sticky positioning
+- **Terrain Generation**: Safe-zone blob algorithm with edge masking
+- **Coastline System**: Robust exterior edge detection with adjacency-map walker
+- **Color System**: Deep blue to white gradient with sea level threshold
+
 #### Build and Deployment
 - **TypeScript Compilation**: All type errors resolved
 - **Production Build**: Successfully builds to dist/ folder
 - **Development Server**: Running on http://localhost:5173
+- **Git Repository**: All changes committed and pushed to main branch
 - **Documentation**: Comprehensive README and devlog
 
 #### Debugging and Testing Phase
