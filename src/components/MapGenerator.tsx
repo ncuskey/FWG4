@@ -58,7 +58,8 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         
         // Force border cells to be water to ensure closed coastline loops
         console.log('Forcing border cells to water...');
-        const EDGE_EPSILON = 1; // same units as cell coordinates
+        const EDGE_EPSILON = 50; // much larger to catch cells near borders
+        let borderCellsForced = 0;
         terrainResult.cells.forEach(cell => {
           const [cx, cy] = cell.centroid;
           // if the centroid is within EDGE_EPSILON of any map border, force water:
@@ -69,9 +70,10 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
             cy >= height - EDGE_EPSILON
           ) {
             cell.isLand = false;
+            borderCellsForced++;
           }
         });
-        console.log('Border cells forced to water');
+        console.log(`Border cells forced to water: ${borderCellsForced} cells`);
         
         // Generate coastlines
         console.log('Generating coastlines...');
