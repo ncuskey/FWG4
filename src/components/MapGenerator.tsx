@@ -28,7 +28,7 @@ const DEFAULT_PARAMS: TerrainParams = {
 
 export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => {
   const [params, setParams] = useState<TerrainParams>(DEFAULT_PARAMS);
-  const [numPoints, setNumPoints] = useState(3000);
+  const [numPoints, setNumPoints] = useState(8000);
   const [cells, setCells] = useState<Cell[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);

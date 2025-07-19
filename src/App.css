@@ -37,11 +37,16 @@ main {
   padding: 2rem;
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
 }
 
 .controls {
-  margin-bottom: 2rem;
+  flex: 0 0 300px;
   text-align: left;
+  position: sticky;
+  top: 2rem;
 }
 
 .generate-btn {
@@ -133,6 +138,7 @@ main {
   }
 
 .map-container {
+  flex: 1;
   display: flex;
   justify-content: center;
   background: rgba(0, 0, 0, 0.1);
@@ -161,12 +167,23 @@ footer {
     font-size: 2rem;
   }
   
+  .map-generator {
+    flex-direction: column;
+    padding: 1rem;
+  }
+  
+  .controls {
+    flex: none;
+    position: static;
+    width: 100%;
+  }
+  
   .param-controls {
     grid-template-columns: 1fr;
   }
   
-  .map-generator {
-    padding: 1rem;
+  .map-container {
+    width: 100%;
   }
   
   .heightmap {
