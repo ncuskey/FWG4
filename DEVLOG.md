@@ -34,16 +34,19 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
 - Bounds checking to ensure points stay within map area
 
 #### Terrain Generation (`src/utils/terrain.ts`)
-- **Blob Algorithm**: Implemented Azgaar's blob-based terrain generation
+- **Safe-Zone Blob Algorithm**: Implemented constrained blob generation with guaranteed interior placement
 - **Multi-Peak System**: Support for multiple terrain peaks with different heights
-- **Height Propagation**: BFS-based spreading with configurable falloff
-- **Randomness Factor**: Sharpness parameter for irregular coastlines
+- **Direct Height Calculation**: Distance-based height computation instead of BFS propagation
+- **Edge Masking**: Smooth tapering to zero at map borders for natural ocean rim
 
 **Algorithm Details:**
-- Main blob: Single large peak (height 1.0)
-- Secondary blobs: Multiple smaller peaks (0.3-0.7 height range)
-- Falloff: Configurable rate (0.7-0.95) for terrain steepness
-- Sharpness: Randomness in propagation (0-0.3) for natural variation
+- **Safe Zone**: All blobs placed within MARGIN=150 pixels of map borders
+- **MAX_BLOB_RADIUS = 150**: Ensures no blob influence reaches map edges
+- **Main blob**: Single large peak (height 1.0) in safe zone
+- **Secondary blobs**: Multiple smaller peaks (0.3-0.7 height range) in safe zone
+- **Falloff**: Configurable rate (0.7-0.95) for terrain steepness
+- **Sharpness**: Randomness in height calculation (0-0.3) for natural variation
+- **Edge Mask**: Smooth transition from full height to zero at borders
 
 #### Color Mapping (`src/utils/color.ts`)
 - **Color Scheme**: Deep blue → Light blue → Green → Brown → White
@@ -193,6 +196,30 @@ Building a React-based procedural fantasy map heightmap generator inspired by Az
   - Continents touching map edges now have complete, closed coastline outlines.
   - Border segments are properly integrated with land-water segments for full feature boundaries.
   - Debug logging shows near-border edges and total border segment counts for tuning.
+
+#### Safe-Zone Blob Generation - Fundamental Terrain Improvement
+- **Problem Identified**: Previous blob generation allowed terrain features to spill over map edges, requiring complex border detection and water forcing logic.
+- **Root Cause Analysis**: BFS-based blob propagation from random cell centers could reach map borders, creating half-islands and incomplete terrain features.
+- **Fundamental Solution Implemented**: 
+  - **Safe-Zone Constraint**: All blobs placed within MARGIN=150 pixels of map borders.
+  - **MAX_BLOB_RADIUS = 150**: Ensures no blob influence reaches map edges.
+  - **Direct Height Calculation**: Replaced BFS propagation with distance-based height computation.
+  - **Edge Masking**: Smooth tapering to zero at borders for natural ocean rim.
+- **Why This Works**:
+  - **Guaranteed Interior Terrain**: No blob can ever influence cells at map borders.
+  - **Eliminates Edge Cases**: No more half-islands or incomplete terrain features.
+  - **Simplified Coastline Logic**: No need for complex border detection since terrain is interior-only.
+  - **Natural Ocean Rim**: Edge masking creates smooth transition to water at borders.
+- **Implementation Details**:
+  - **`generateRandomBlobInSafeZone()`**: Places blobs in [MARGIN, WIDTH-MARGIN] × [MARGIN, HEIGHT-MARGIN].
+  - **`calculateBlobHeight()`**: Direct distance-based height calculation with falloff and sharpness.
+  - **`calculateEdgeMask()`**: Smooth tapering function for natural border transition.
+  - **Modified `generateTerrain()`**: Accepts width/height parameters for safe-zone calculation.
+- **Results**:
+  - **100% interior terrain generation** - no features ever touch map borders.
+  - **Simplified coastline generation** - no complex border detection needed.
+  - **Natural fantasy map aesthetics** with guaranteed ocean rim.
+  - **More efficient terrain generation** with direct height calculation.
 
 #### Border Water Forcing - Rock-Solid Final Solution
 - **Problem Identified**: Despite all previous improvements, some coastline loops still failed to close completely, particularly for landmasses touching map borders.
