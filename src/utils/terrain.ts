@@ -150,9 +150,14 @@ export function applySeaLevel(
   width: number, 
   height: number
 ): void {
-  const BORDER_EPSILON = 1; // small epsilon for border detection
+  const BORDER_EPSILON = 20; // increased epsilon for larger canvas
+  
+  let borderCellsForced = 0;
+  let totalCells = 0;
   
   cells.forEach(cell => {
+    totalCells++;
+    
     // 1) first classify by height
     const aboveSea = cell.height > seaLevel;
 
@@ -164,11 +169,18 @@ export function applySeaLevel(
     );
 
     // 3) final land flag: must be above sea *and* not touch the edge
+    const wasLand = aboveSea;
     cell.isLand = aboveSea && !touchesBorder;
+    
+    if (wasLand && !cell.isLand) {
+      borderCellsForced++;
+    }
     
     // Set height to 0 for water cells
     if (!cell.isLand) {
       cell.height = 0;
     }
   });
+  
+  console.log(`Border forcing: ${borderCellsForced} cells forced to water out of ${totalCells} total cells`);
 } 
