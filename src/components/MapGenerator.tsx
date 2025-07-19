@@ -146,6 +146,14 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         const finalLandNearBorder = finalBorderCheck.filter(cell => cell.isLand);
         if (finalLandNearBorder.length > 0) {
           console.warn(`🚨 FINAL CHECK: ${finalLandNearBorder.length} land cells within 100px of border - forcing to water`);
+          // Analyze which borders are affected
+          const rightBorder = finalLandNearBorder.filter(c => c.centroid[0] >= width - 100);
+          const leftBorder = finalLandNearBorder.filter(c => c.centroid[0] <= 100);
+          const topBorder = finalLandNearBorder.filter(c => c.centroid[1] <= 100);
+          const bottomBorder = finalLandNearBorder.filter(c => c.centroid[1] >= height - 100);
+          
+          console.warn(`🚨 BORDER ANALYSIS: Right=${rightBorder.length}, Left=${leftBorder.length}, Top=${topBorder.length}, Bottom=${bottomBorder.length}`);
+          
           console.warn(`🚨 DETAILS:`, finalLandNearBorder.map(c => ({
             id: c.id,
             centroid: [c.centroid[0].toFixed(1), c.centroid[1].toFixed(1)],
@@ -156,7 +164,10 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
               c.centroid[1], 
               width - c.centroid[0], 
               height - c.centroid[1]
-            ).toFixed(1)
+            ).toFixed(1),
+            borderSide: c.centroid[0] <= 100 ? 'LEFT' : 
+                       c.centroid[0] >= width - 100 ? 'RIGHT' :
+                       c.centroid[1] <= 100 ? 'TOP' : 'BOTTOM'
           })));
           
           finalLandNearBorder.forEach(cell => {
@@ -376,12 +387,21 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
       </div>
       
       <div className="map-container">
-        <svg width={width} height={height} className="heightmap">
+        <svg 
+          width={width} 
+          height={height} 
+          className="heightmap"
+          viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="xMidYMid meet"
+        >
           <defs>
             <clipPath id="mapClip">
               <rect width={width} height={height} />
             </clipPath>
           </defs>
+          
+          {/* Debug: Show canvas boundaries */}
+          <rect x="0" y="0" width={width} height={height} fill="none" stroke="red" strokeWidth="2" opacity="0.5" />
           
           {/* Water background */}
           <rect width={width} height={height} fill="#1e3a8a" />
