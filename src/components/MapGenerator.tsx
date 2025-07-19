@@ -56,6 +56,23 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         applySeaLevel(terrainResult.cells, params.seaLevel);
         console.log('Sea level applied');
         
+        // Force border cells to be water to ensure closed coastline loops
+        console.log('Forcing border cells to water...');
+        const EDGE_EPSILON = 1; // same units as cell coordinates
+        terrainResult.cells.forEach(cell => {
+          const [cx, cy] = cell.centroid;
+          // if the centroid is within EDGE_EPSILON of any map border, force water:
+          if (
+            cx <= EDGE_EPSILON ||
+            cx >= width - EDGE_EPSILON ||
+            cy <= EDGE_EPSILON ||
+            cy >= height - EDGE_EPSILON
+          ) {
+            cell.isLand = false;
+          }
+        });
+        console.log('Border cells forced to water');
+        
         // Generate coastlines
         console.log('Generating coastlines...');
         markCoastalCells(terrainResult.cells);
