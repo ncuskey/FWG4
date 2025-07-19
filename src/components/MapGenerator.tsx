@@ -51,10 +51,10 @@ export const MapGenerator: React.FC<MapGeneratorProps> = ({ width, height }) => 
         const terrainResult = generateTerrain(mesh, params, width, height);
         console.log('Terrain generated');
         
-        // Apply sea level and classify land/water (including border forcing)
-        console.log('Applying sea level and border forcing...');
-        applySeaLevel(terrainResult.cells, params.seaLevel, width, height);
-        console.log('Sea level and border forcing applied');
+        // Apply sea level and classify land/water
+        console.log('Applying sea level...');
+        applySeaLevel(terrainResult.cells, params.seaLevel);
+        console.log('Sea level applied');
         
         // Generate coastlines
         console.log('Generating coastlines...');

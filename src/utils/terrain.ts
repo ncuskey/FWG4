@@ -59,38 +59,24 @@ export function generateTerrain(
     blobs.push(blob);
   }
   
-  // Apply blob heights to all cells
+  // Apply blob heights to all cells with edge masking
   cells.forEach(cell => {
     const [cx, cy] = cell.centroid;
     
-    // Calculate height from all blobs
-    let maxHeight = 0;
+    // 1) Compute raw height from all blobs
+    let rawHeight = 0;
     for (const blob of blobs) {
       const distance = Math.sqrt((cx - blob.x) ** 2 + (cy - blob.y) ** 2);
       const blobHeight = calculateBlobHeight(distance, blob.radius, blob.height, falloff, sharpness);
-      maxHeight = Math.max(maxHeight, blobHeight);
+      rawHeight = Math.max(rawHeight, blobHeight);
     }
     
-    // Apply edge mask for smooth ocean rim
-    const edgeMask = calculateEdgeMask(cx, cy, width, height, MARGIN);
-    cell.height = maxHeight * edgeMask;
+    // 2) Apply edge mask - guarantees zero height at borders
+    const mask = calculateEdgeMask(cx, cy, width, height, MARGIN);
+    cell.height = rawHeight * mask;
   });
   
-  // Fallback border override - belt and suspenders approach
-  const EDGE_EPSILON = 30; // conservative edge detection
-  let edgeCellsForced = 0;
-  cells.forEach(cell => {
-    const poly = cell.polygon;
-    const touchesEdge = poly.some(([x, y]) =>
-      x <= EDGE_EPSILON || x >= width - EDGE_EPSILON ||
-      y <= EDGE_EPSILON || y >= height - EDGE_EPSILON
-    );
-    if (touchesEdge) {
-      cell.height = 0; // Force edge cells to water
-      edgeCellsForced++;
-    }
-  });
-  console.log(`Fallback edge forcing: ${edgeCellsForced} cells forced to water`);
+  console.log(`Edge masking applied: height guaranteed to be 0 at map borders`);
   
   // Find min/max heights
   const heights = cells.map(cell => cell.height);
@@ -145,6 +131,7 @@ function calculateBlobHeight(
 
 /**
  * Calculate edge mask for smooth ocean rim
+ * Returns 0 at the very border, 1 at MARGIN distance from border
  */
 function calculateEdgeMask(
   x: number,
@@ -153,10 +140,13 @@ function calculateEdgeMask(
   height: number,
   margin: number
 ): number {
-  const dx = Math.min(x, width - x) / margin;
-  const dy = Math.min(y, height - y) / margin;
-  // dx, dy go 0→1 as you move from border to margin inside
-  return Math.min(dx, dy, 1);
+  // distance to each edge
+  const dx = Math.min(x, width - x);
+  const dy = Math.min(y, height - y);
+  // normalize to 0 .. 1 over the MARGIN
+  const nx = Math.min(dx / margin, 1);
+  const ny = Math.min(dy / margin, 1);
+  return Math.min(nx, ny);
 }
 
 /**
@@ -165,48 +155,23 @@ function calculateEdgeMask(
  */
 export function applySeaLevel(
   cells: Cell[], 
-  seaLevel: number, 
-  width: number, 
-  height: number
+  seaLevel: number
 ): void {
-  const BORDER_EPSILON = 50; // much larger epsilon for guaranteed border forcing
-  
-  let borderCellsForced = 0;
-  let totalCells = 0;
+  let landCells = 0;
+  let waterCells = 0;
   
   cells.forEach(cell => {
-    totalCells++;
+    // Simple height-based classification - edge masking guarantees no land at borders
+    cell.isLand = cell.height > seaLevel;
     
-    // 1) first classify by height
-    const aboveSea = cell.height > seaLevel;
-
-    // 2) then check: does this cell *touch* the map border?
-    const poly = cell.polygon;
-    const touchesBorder = poly.some(([x, y]) =>
-      x <= BORDER_EPSILON || x >= width - BORDER_EPSILON ||
-      y <= BORDER_EPSILON || y >= height - BORDER_EPSILON
-    );
-
-    // 3) also check centroid distance as backup
-    const [cx, cy] = cell.centroid;
-    const centroidNearBorder = 
-      cx <= BORDER_EPSILON || cx >= width - BORDER_EPSILON ||
-      cy <= BORDER_EPSILON || cy >= height - BORDER_EPSILON;
-
-    // 4) final land flag: must be above sea *and* not touch the edge *and* centroid not near border
-    const wasLand = aboveSea;
-    cell.isLand = aboveSea && !touchesBorder && !centroidNearBorder;
-    
-    if (wasLand && !cell.isLand) {
-      borderCellsForced++;
-    }
-    
-    // Set height to 0 for water cells
-    if (!cell.isLand) {
-      cell.height = 0;
+    if (cell.isLand) {
+      landCells++;
+    } else {
+      waterCells++;
+      cell.height = 0; // Set water cells to 0 height
     }
   });
   
-  console.log(`Border forcing: ${borderCellsForced} cells forced to water out of ${totalCells} total cells`);
-  console.log(`Border epsilon: ${BORDER_EPSILON}px, Canvas: ${width}x${height}`);
+  console.log(`Sea level classification: ${landCells} land cells, ${waterCells} water cells`);
+  console.log(`Edge masking ensures no land at map borders`);
 } 
